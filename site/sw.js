@@ -1,5 +1,5 @@
 /* Cache only the application shell. API data and secrets are never cached here. */
-const CACHE='atlas-shell-fusion-v3.1.0';
+const CACHE='atlas-shell-fusion-v3.2.0';
 const FILES=['./','./index.html','./styles.css','./data.js','./app.js','./engine.js','./icon.svg','./icon-192.png','./icon-512.png','./manifest.webmanifest'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('atlas-shell-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
