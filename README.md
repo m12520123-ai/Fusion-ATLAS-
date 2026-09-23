@@ -39,3 +39,13 @@ The package bumps the service-worker cache to `atlas-shell-fusion-v3.0.0`. If an
 - Technical radar scores are transparent rule scores, not probabilities and not a prediction of tomorrow's return.
 - `dataset` endpoints depend on FinMind dataset permissions; some chip / fundamental / news datasets may require provider entitlement.
 - A public Netlify URL exposes these API endpoints to anyone who knows the URL. Provider secrets remain server-side, but request quota can still be consumed. For a private production service, add authentication and server-side rate limiting.
+
+
+## v5 routing fix
+Each Netlify Function exports its own custom `config.path` such as `/api/status` and `/api/quotes`. Netlify only exposes the function at that custom path when `config.path` is set, so no redirect rule to `/.netlify/functions/*` is needed. The v4 redirect was removed because it could route `/api/*` to a default function URL that Netlify intentionally disables for custom-path functions.
+
+Test after deploy:
+- `/api/status`
+- `/api/quotes?market=TW`
+
+Do not use `/.netlify/functions/status` for this build.
