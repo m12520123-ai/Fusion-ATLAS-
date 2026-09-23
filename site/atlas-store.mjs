@@ -1,5 +1,5 @@
 
-export const VERSION='9.0.0';
+export const VERSION='10.0.0';
 export const KEY='atlas-map-v9-user';
 export const finite=v=>typeof v==='number'&&Number.isFinite(v);
 export const safeURL=v=>{try{const u=new URL(String(v));return /^https?:$/.test(u.protocol)&&!u.username&&!u.password?u.href:'';}catch{return '';}};
@@ -91,9 +91,9 @@ export class API{
      if(body)headers['content-type']='application/json';
      const res=await fetch('/api/atlas/'+path,{method,headers,body:body?JSON.stringify(body):undefined,signal:ctl.signal,cache:'no-store'});
      const type=res.headers.get('content-type')||'';
-     if(!type.includes('application/json'))throw new ApiError(res.status===404?'新版 API 尚未部署，請查看「資料設定 → 連線檢查」。':'伺服器回傳網頁而不是 JSON；請確認 Netlify 發布的是 v9。',res.status);
+     if(!type.includes('application/json'))throw new ApiError(res.status===404?'新版 API 尚未部署，請查看「資料設定 → 連線檢查」。':'伺服器回傳網頁而不是 JSON；請確認 Netlify 發布的是 v10。',res.status);
      const data=await res.json();
-     if(!res.ok||data.error)throw new ApiError(data.error||`HTTP ${res.status}`,res.status);
+     if(!res.ok||data.error){const error=new ApiError(data.error||`HTTP ${res.status}`,res.status);error.code=data.code;error.provider=data.provider;error.retryAfterSeconds=data.retryAfterSeconds;throw error;}
      return data;
     }catch(e){if(e.name==='AbortError')throw new ApiError('資料來源逾時；已保留原有資料，可按重試。',504);throw e;}
     finally{clearTimeout(timer);}

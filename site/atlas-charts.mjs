@@ -1,5 +1,5 @@
 
-import { finite } from './atlas-store.mjs';
+import { finite } from './atlas-store.mjs?v=10.0.0';
 export const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const nf=(v,d=0)=>finite(v)?v.toLocaleString('zh-TW',{minimumFractionDigits:d,maximumFractionDigits:d}):'—';
 export const pct=v=>finite(v)?`${v>0?'+':''}${v.toFixed(2)}%`:'—';

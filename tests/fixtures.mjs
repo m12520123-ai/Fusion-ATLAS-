@@ -43,6 +43,7 @@ export async function mockFetch(input,options={}){
   else if(d==='TaiwanStockMarginShortSaleSuspension')rows=[];
   return response({status:200,msg:'test data only',data:rows});
  }
+ if(url.hostname==='query1.finance.yahoo.com'){const {yahooMockFetch}=await import('./yahoo-fixtures.mjs');return yahooMockFetch(input);}
  if(url.hostname==='api.twelvedata.com')return response({code:403,status:'error',message:'Unconfigured test overseas'},403);
  throw Error('Unexpected mock URL '+url.origin+url.pathname);
 }

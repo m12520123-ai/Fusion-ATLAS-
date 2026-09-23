@@ -124,7 +124,7 @@ export async function quotes(market='TW'){
   return null;
 }
 export async function history(stock,market){
-  return cached(`history:${market}:${stock}`,1800,async()=>{
+  return cached(`history:${market}:${stock}`,market==='TW'?1800:300,async()=>{
     const data=await getHistory(stock,market);
     // No partial current-day daily candle during regular Taiwan trading hours.
     if(market==='TW'){

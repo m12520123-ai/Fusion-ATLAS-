@@ -1,7 +1,8 @@
 
 import { timingSafeEqual } from 'node:crypto';
 import { json, env, fail, HttpError, getHistory, searchMarket, currencies } from '../lib/providers.mjs';
-import { official, dataset, quotes, history, cached } from '../lib/data.mjs';
+import { official, dataset, quotes, history } from '../lib/data.mjs';
+import { getYahooQuotes } from '../lib/yahoo.mjs';
 
 export const config = { path: '/api/atlas/*' };
 const compare=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
@@ -17,11 +18,12 @@ function securityHeaders(response){
 export default async function handler(req,context) {
   try{
     const url=new URL(req.url), route=url.pathname.replace(/^\/api\/atlas\/?/,'');
-    if(route==='status')return json({ok:true,version:'9.0.0',build:'map-rebuild-9',platform:'netlify-functions',
-      quotesMode:'end-of-day',realtime:false,delayedIntraday:false,
+    if(route==='status')return json({ok:true,version:'10.0.0',build:'yahoo-overseas-10',platform:'netlify-functions',
+      quotesMode:'TW:end-of-day; US/JP/KR:latest-available',realtime:false,delayedIntraday:null,
       accessRequired:!!env('ATLAS_ACCESS_TOKEN'),
       historicalTokenConfigured:!!env('FINMIND_TOKEN'),
-      overseasConfigured:!!env('TWELVE_DATA_API_KEY'),
+      overseasConfigured:true,overseasProvider:'Yahoo Finance',overseasApiKeyRequired:false,overseasDataVerified:false,
+      overseasMarkets:['US','JP','KR'],overseasCacheSeconds:300,
       aiConfigured:!!(env('OPENAI_API_KEY')&&env('OPENAI_MODEL')&&env('ATLAS_ACCESS_TOKEN')),
       apiReady:true,quoteDataVerified:false,notice:'設定存在不代表資料來源授權或連線成功；請以各資料回應為準。'});
     guard(req);
@@ -32,20 +34,8 @@ export default async function handler(req,context) {
     if(route==='quotes'){
       if(market==='TW')data=await quotes(market);
       else{
-        if(!env('TWELVE_DATA_API_KEY'))throw new HttpError('此市場尚未設定 TWELVE_DATA_API_KEY；台股連線不受影響。',503);
-        const symbols=(url.searchParams.get('symbols')||'').split(',').filter(Boolean).slice(0,5);
-        if(!symbols.length)throw new HttpError('海外查詢需指定 symbols',400);
-        const rs=await Promise.allSettled(symbols.map(s=>history(s,market)));
-        const qs=[],warnings=[];
-        rs.forEach((r,i)=>{
-          if(r.status==='rejected'){warnings.push(`${symbols[i]}：${r.reason.message}`);return;}
-          const h=r.value.rows,a=h.at(-1),b=h.at(-2);
-          if(a&&b)qs.push({id:symbols[i],name:r.value.name||symbols[i],market,currency:currencies[market],
-            price:a.close,change:(a.close/b.close-1)*100,date:a.date,volume:a.volume===null?null:a.volume/1000,
-            volumeUnit:'thousand-shares',amount:null,source:r.value.source,quoteType:'end-of-day'});
-        });
-        if(!qs.length)throw new HttpError(warnings.join('；')||'海外行情沒有有效資料',502);
-        data={quotes:qs,warnings,mode:'official',realtime:false,fetchedAt:new Date().toISOString()};
+        const symbols=(url.searchParams.get('symbols')||'').split(',').map(s=>s.trim()).filter(Boolean);
+        data=await getYahooQuotes(symbols,market);
       }
     } else if(route==='history'){ data=await history(stock,market);
     } else if(route==='official'){ data=await official(url.searchParams.get('kind')||'companies');
@@ -54,7 +44,7 @@ export default async function handler(req,context) {
     } else if(route==='ai')return await ai(req);
     else throw new HttpError('找不到此 API；請使用 /api/atlas/status。',404);
     // Private/no-store on token-protected responses, CDN-cache public aggregates otherwise.
-    return securityHeaders(json(data,200,env('ATLAS_ACCESS_TOKEN')?'no-store':'public, max-age=0, s-maxage=600'));
+    return securityHeaders(json(data,200,env('ATLAS_ACCESS_TOKEN')?'no-store':market==='TW'?'public, max-age=0, s-maxage=600':'public, max-age=0, s-maxage=300'));
   }catch(e){return fail(e);}
 }
 async function ai(req){

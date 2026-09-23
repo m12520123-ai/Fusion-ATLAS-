@@ -30,11 +30,12 @@ const prelude=`
 globalThis.ATLAS_TEST_MODE=true;
 (function(){
 try{localStorage.length;}catch{
- const values={};Object.defineProperty(globalThis,'localStorage',{value:{getItem:k=>values[k]??null,setItem:(k,v)=>values[k]=String(v),removeItem:k=>delete values[k],clear:()=>{for(const k in values)delete values[k]},key:i=>Object.keys(values)[i],get length(){return Object.keys(values).length}}});
+ const values=globalThis.ATLAS_TEST_STORAGE||{};Object.defineProperty(globalThis,'localStorage',{value:{getItem:k=>values[k]??null,setItem:(k,v)=>values[k]=String(v),removeItem:k=>delete values[k],clear:()=>{for(const k in values)delete values[k]},key:i=>Object.keys(values)[i],get length(){return Object.keys(values).length}}});
 }
 })();
 const FIXTURES=${JSON.stringify(map)};
 globalThis.fetch=async function(input,options={}){
+ if(globalThis.__atlasApi){const r=await globalThis.__atlasApi(String(input),options);return new Response(JSON.stringify(r.data),{status:r.status,headers:{'content-type':'application/json'}});}
  const u=new URL(String(input),'https://preview.invalid/');
  const key=u.pathname.split('/').at(-1)+'?'+[...u.searchParams].sort().map(([k,v])=>k+'='+v).join('&');
  const r=FIXTURES[key]||{status:503,data:{error:'此單檔預覽未附該項測試資料；正式版本需由後端讀取來源。'}};

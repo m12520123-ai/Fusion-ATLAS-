@@ -1,6 +1,6 @@
 
-const CACHE='atlas-map-v9-shell';
-const FILES=['/index.html','/atlas-ui.css?v=9.0.0','/atlas-engine.js?v=9.0.0','/atlas-app.mjs?v=9.0.0','/atlas-catalog.mjs','/atlas-store.mjs','/atlas-charts.mjs','/map-icon.svg'];
+const CACHE='atlas-map-v10-shell';
+const FILES=['/index.html','/atlas-ui.css?v=10.0.0','/atlas-engine.js?v=10.0.0','/atlas-app.mjs?v=10.0.0','/atlas-catalog.mjs?v=10.0.0','/atlas-store.mjs?v=10.0.0','/atlas-charts.mjs?v=10.0.0','/map-icon.svg'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>(k.startsWith('atlas-shell-')||k.startsWith('atlas-map-v'))&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',e=>{

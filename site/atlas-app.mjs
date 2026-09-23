@@ -1,7 +1,7 @@
 
-import {CATALOG} from './atlas-catalog.mjs';
-import {VERSION,API,ApiError,loadUser,saveUser,validateUser,validateTrade,ledger,importLegacy,cacheGet,cachePut,clearMarketCache,today,uid,safeURL,validDate,finite,download,csvParse,csvEncode} from './atlas-store.mjs';
-import {esc,nf,pct,tone,money,spark,lineChart,barsChart,candles,treemap,chipDays,revenueRows} from './atlas-charts.mjs';
+import {CATALOG} from './atlas-catalog.mjs?v=10.0.0';
+import {VERSION,API,ApiError,loadUser,saveUser,validateUser,validateTrade,ledger,importLegacy,cacheGet,cachePut,clearMarketCache,today,uid,safeURL,validDate,finite,download,csvParse,csvEncode} from './atlas-store.mjs?v=10.0.0';
+import {esc,nf,pct,tone,money,spark,lineChart,barsChart,candles,treemap,chipDays,revenueRows} from './atlas-charts.mjs?v=10.0.0';
 const E=globalThis.FusionEngine,$=(q,r=document)=>r.querySelector(q),$$=(q,r=document)=>[...r.querySelectorAll(q)];
 const api=new API();let user=loadUser(), market='TW', feedStore=new Map(), quoteMap=new Map(), companyMap=new Map(), histMap=new Map(), analyses=new Map(), quoteState={state:'loading',error:'',cache:false},apiStatus=null;
 let activeTheme='ai',category='all',topicQuery='',companyTab='basic',financeTab='revenue',chipTab='institutions',chartUnit='day',chartRange=90,chartIndicator='kd',pinned=null,heatWeight='amount',heatMode='stocks',rotationStep=100;
@@ -13,8 +13,9 @@ const navs=[['focus','每日焦點','home'],['themes','題材總覽','map'],['co
 const routes=()=>{const a=location.hash.slice(1).split('/');return [a[0]||'focus',...a.slice(1).map(x=>{try{return decodeURIComponent(x);}catch{return x;}})];};
 const marketOf=s=>['TWSE','TPEX','TW'].includes(s?.market)?'TW':s?.market||'TW';
 const curr=m=>({TW:'TWD',US:'USD',JP:'JPY',KR:'KRW'})[m]||'TWD';
-const stock=id=>({...CATALOG.stocks.find(s=>s.id===id),...companyMap.get(id),...quoteMap.get(id),id,tags:CATALOG.stocks.find(s=>s.id===id)?.tags||[]});
-function stocks(m=market){const ids=new Set([...CATALOG.stocks.map(s=>s.id),...quoteMap.keys(),...companyMap.keys()]);return [...ids].map(stock).filter(s=>s.name&&marketOf(s)===m);}
+const symbolMarket=id=>/\.T$/i.test(id)?'JP':/\.(KS|KQ)$/i.test(id)?'KR':/^\d{4,6}[A-Z]?$/.test(id)?'TW':'US';
+const stock=id=>({id,name:id,market:symbolMarket(id),currency:curr(symbolMarket(id)),...CATALOG.stocks.find(s=>s.id===id),...companyMap.get(id),...quoteMap.get(id),id,tags:CATALOG.stocks.find(s=>s.id===id)?.tags||[]});
+function stocks(m=market){const ids=new Set([...CATALOG.stocks.map(s=>s.id),...quoteMap.keys(),...companyMap.keys(),...user.watch,...user.trades.map(t=>t.stock)]);return [...ids].map(stock).filter(s=>s.name&&marketOf(s)===m);}
 const themes=()=>[...CATALOG.themes,...user.customThemes];
 const theme=id=>themes().find(t=>t.id===id)||themes()[0];
 const members=id=>stocks().filter(s=>s.tags?.includes(id)||user.relations.some(r=>r.theme===id&&r.stock===s.id));
@@ -38,15 +39,21 @@ function feedContent(key,renderFn,help=''){
  if(!f.data?.rows?.length)return empty('來源回傳 0 筆資料','這不是連線失敗；目前資料區間／篩選條件沒有記錄。',help);
  return renderFn(f.data.rows)+feedSource(key);
 }
+function quoteStamp(s){return [s?.date,s?.time,s?.timezone].filter(Boolean).join(' ')||'\u5c1a\u7121\u5831\u50f9\u6642\u9593';}
+function currentQuoteStamp(){return quoteStamp(quotedStocks().sort((a,b)=>String(b.sourceTimestamp||b.date||'').localeCompare(String(a.sourceTimestamp||a.date||'')))[0]);}
 function notice(){
- if(quoteState.state==='loading')return `<div class="notice">${icon('refresh')}<span>正在讀取 ${esc(market)} 行情。頁面先顯示研究分類；價格不會用示範數字代替。</span></div>`;
- if(quoteState.state==='error')return `<div class="notice error">${icon('info')}<span><b>${apiStatus?.apiReady?'API 可用，行情尚未取得':'行情尚未取得'}</b>　${esc(quoteState.error)}</span><a href="#settings">檢查連線</a></div>`;
- const q=quotedStocks();return `<div class="notice">${icon('info')}<span><b>${quoteState.cache?'已儲存快取':'盤後行情'}</b>　資料日期 ${esc(currentSourceDate())} · 本市場 ${nf(q.length)} 檔有價格。不是即時報價，也不是保證延遲 15 分鐘的盤中行情。</span><a href="#settings">來源與狀態</a></div>`;
+ if(quoteState.state==='loading')return `<div class="notice">${icon('refresh')}<span>\u6b63\u5728\u8b80\u53d6 ${esc(market)} \u884c\u60c5${quoteState.total?`\uff08${quoteState.progress||0}/${quoteState.total}\uff09`:''}\u3002${market==='TW'?'\u53f0\u80a1\u5b98\u65b9\u76e4\u5f8c\u8cc7\u6599':'Yahoo \u5831\u50f9\u8207\u65e5 K \u5206\u6279\u8f09\u5165'}\uff1b\u4e0d\u4ee5\u793a\u7bc4\u6578\u503c\u4ee3\u66ff\u3002</span></div>`;
+ if(quoteState.state==='error')return `<div class="notice error">${icon('info')}<span><b>\u672c\u5e02\u5834\u884c\u60c5\u5c1a\u672a\u53d6\u5f97</b>\u3000${esc(quoteState.error)}</span><a href="#settings">\u6aa2\u67e5\u9023\u7dda</a></div>`;
+ const q=quotedStocks(),old=q.filter(s=>s.stale).length;
+ const label=quoteState.cache?'\u820a\u5feb\u53d6\uff0c\u975e\u525b\u66f4\u65b0':market==='TW'?'\u5b98\u65b9\u76e4\u5f8c\u884c\u60c5':'Yahoo Finance \u6700\u8fd1\u53ef\u7528\u5831\u50f9';
+ const detail=market==='TW'?`\u8cc7\u6599\u65e5\u671f ${esc(currentSourceDate())}`:`\u5831\u50f9\u6642\u9593 ${esc(currentQuoteStamp())}\uff1b\u4f9d\u4ea4\u6613\u6240\u53ef\u80fd\u5ef6\u9072`;
+ return `<div class="notice ${quoteState.cache?'warn':''}">${icon('info')}<span><b>${label}</b>\u3000${detail}\u3002${nf(q.length)} \u6a94\u6709\u50f9\u683c${old?`\uff08${old} \u6a94\u70ba\u820a\u8cc7\u6599\uff09`:''}\uff1b\u975e\u5168\u5e02\u5834\uff0c\u4e0d\u4fdd\u8b49\u5373\u6642\u3002${quoteState.warnings?.length?`<br><b>\u90e8\u5206\u672a\u66f4\u65b0\uff1a</b>${esc(quoteState.warnings.slice(0,2).join('\uff1b'))}`:''}</span><a href="#settings">\u4f86\u6e90\u8207\u72c0\u614b</a></div>`;
 }
+
 function applyAppearance(){const s=user.settings;document.documentElement.dataset.theme=s.theme==='system'?(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'):s.theme;document.documentElement.dataset.font=s.font;document.documentElement.dataset.color=s.color;}
 function render(){
  applyAppearance();const [route]=routes(),active=route==='theme'?'themes':route==='company'?'themes':route;
- const q=quotedStocks(),con=quoteState.state==='loading'?'正在載入':q.length?`${quoteState.cache?'快取 · ':''}盤後 ${currentSourceDate()}`:quoteState.state==='error'?'此市場資料取得失敗':'待取得行情';
+ const q=quotedStocks(),con=quoteState.state==='loading'?'正在載入':q.length?`${quoteState.cache?'舊快取 · ':''}${market==='TW'?'盤後':'Yahoo Finance'} ${currentSourceDate()}`:quoteState.state==='error'?'此市場資料取得失敗':'待取得行情';
  const main=renderPage();
  const focus=document.activeElement?.id,selection=document.activeElement?.selectionStart;
  $('#app').innerHTML=`${globalThis.ATLAS_TEST_MODE?'<div class="test-ribbon">介面驗收用測試資料 · 非真實行情 · 此模式不會包含在正式資料來源</div>':''}
@@ -79,10 +86,10 @@ function focusPage(){
  const qs=quotedStocks(),up=qs.filter(s=>s.change>0).length,down=qs.filter(s=>s.change<0).length,amount=qs.map(s=>s.amount).filter(finite).reduce((s,x)=>s+x,0);
  const ix=dataRows('official:index').filter(x=>finite(x.value)).sort((a,b)=>a.date.localeCompare(b.date)),latest=ix.at(-1);
  const topThemes=themes().map(t=>({...t,avg:meanChange(members(t.id)),n:members(t.id).filter(s=>finite(s.change)).length})).filter(t=>t.n).sort((a,b)=>b.avg-a.avg).slice(0,6);
- const hot=[...qs].sort((a,b)=>(b.amount||0)-(a.amount||0)).slice(0,7);
+ const hot=[...qs].sort((a,b)=>market==='TW'?(b.amount||0)-(a.amount||0):(b.volume||0)-(a.volume||0)).slice(0,7);
  return head('每日產業焦點','從市場變化找到題材，再沿供應鏈深入研究。','DAILY INDUSTRY BRIEF',`<button data-action="nav" data-route="themes" class="primary">${icon('map')}探索題材</button>`)
  +notice()+metrics([['加權指數',latest?nf(latest.value,2):'—',latest?latest.date+' · TWSE':'官方指數待取得',latest?tone(latest.change):'','chart'],['上漲 / 下跌',`${nf(up)} <small>/ ${nf(down)}</small>`,qs.length?`${qs.length} 檔有價資料，不等同全市場成分股`:'行情載入後計算','','grid'],['成交金額',amount?money(amount):'—','已取得股票金額合計，不作指數成交額','','wallet'],['研究收藏',nf(user.watch.length),`${user.themeWatch.length} 個題材 · 儲存於本機`,'','star']])
- +`<div class="main-aside section"><div><div class="card"><div class="card-head"><h2>市場走勢</h2><span class="badge">TWSE · 每日收盤</span></div><div class="pad">${ix.length>1?lineChart([{name:'加權指數',values:ix.map(x=>x.value)}],{labels:ix.map(x=>x.date),height:210}):feedContent('official:index',()=>empty('指數資料不足','不以個股代替大盤指數。'))}</div></div><div class="section-title"><h2>產業與公司快訊</h2><span class="badge">來源日期為準</span></div><div class="card"><div class="tabs">${[['announcements','重大訊息'],['news','財經新聞'],['notes','我的研究']].map(([v,t])=>`<button class="${feedTab===v?'selected':''}" data-action="feed-tab" data-tab="${v}">${t}</button>`).join('')}</div>${focusFeed()}</div><div class="section-title"><h2>研究入口</h2><a href="#themes">全部題材 →</a></div><div class="grid g3">${themes().slice(0,3).map(themeCard).join('')}</div></div>
+ +`<div class="main-aside section"><div><div class="card"><div class="card-head"><h2>${market==='TW'?'市場走勢':'台股加權指數（參考，非本市場指數）'}</h2><span class="badge">TWSE · 每日收盤</span></div><div class="pad">${ix.length>1?lineChart([{name:'加權指數',values:ix.map(x=>x.value)}],{labels:ix.map(x=>x.date),height:210}):feedContent('official:index',()=>empty('指數資料不足','不以個股代替大盤指數。'))}</div></div><div class="section-title"><h2>產業與公司快訊</h2><span class="badge">來源日期為準</span></div><div class="card"><div class="tabs">${[['announcements','重大訊息'],['news','財經新聞'],['notes','我的研究']].map(([v,t])=>`<button class="${feedTab===v?'selected':''}" data-action="feed-tab" data-tab="${v}">${t}</button>`).join('')}</div>${focusFeed()}</div><div class="section-title"><h2>研究入口</h2><a href="#themes">全部題材 →</a></div><div class="grid g3">${themes().slice(0,3).map(themeCard).join('')}</div></div>
  <aside><div class="card"><div class="card-head"><h3>題材相對表現</h3><a href="#heat" class="tiny">熱力圖 →</a></div>${topThemes.length?topThemes.map((t,i)=>`<div class="rank-item"><span class="rank-number">${i+1}</span><a href="#theme/${t.id}">${esc(t.name)}</a><span class="delta ${tone(t.avg)}">${pct(t.avg)}</span></div>`).join(''):empty('等待題材行情','取得成分公司價格後，依等權平均計算。')}<div class="source">可編輯分類；僅納入有漲跌幅的公司，非實際資金流量。</div></div>
  <div class="card section"><div class="card-head"><h3>成交焦點</h3><span class="badge">已取得資料</span></div>${hot.length?hot.map((s,i)=>`<div class="rank-item"><span class="rank-number">${i+1}</span><div><a href="#company/${s.id}/${marketOf(s)}">${esc(s.name)}</a><small style="display:block">${s.id}</small></div><span class="delta ${tone(s.change)}">${pct(s.change)}</span></div>`).join(''):empty('尚無行情','資料載入後顯示，不使用假數字。')}</div>
  <div class="card pad section"><h3>建立你的研究路徑</h3><p class="muted tiny">題材 → 供應鏈 → 個股 → 財務／籌碼 → 收藏與持股。每項資料可查看來源，失敗時可單獨重試。</p><a href="#settings">查看各資料的連線狀態 →</a></div></aside></div>`;
@@ -132,7 +139,7 @@ function themePage(id){
 function companyPage(id,m){
  const s=stock(id);if(!s.name)return empty('尚未收錄此公司','先從搜尋或公司清單選擇。','<a href="#themes">回題材總覽</a>');
  const hist=getFeed('history:'+id).data,key=`history:${id}`,tabs=[['basic','基本資料'],['industry','產業分析'],['finance','財務分析'],['chips','籌碼分析'],['etf','ETF 持倉'],['technical','技術分析'],['news','相關新聞'],['research','研究圖表']];
- return `<div class="backline"><button class="linkbtn" data-action="back">← 返回上一頁</button></div><div class="card pad"><div class="detail-top"><div class="brand-icon">${icon('chip')}</div><div><div class="eyebrow">${esc(s.market)} · ${esc(s.currency||curr(marketOf(s)))}</div><h1>${esc(s.name)} <span class="muted">${esc(id)}</span></h1></div><div class="row"><button class="square ${user.watch.includes(id)?'starred':''}" title="收藏" aria-label="收藏公司" data-action="watch-stock" data-id="${id}">${icon('star')}</button><button class="smallbtn" data-action="add-trade" data-stock="${id}">${icon('plus')}交易</button></div><div class="detail-price"><strong class="${tone(s.change)} num">${nf(s.price,2)}</strong><span class="${tone(s.change)} num">${pct(s.change)}</span> <small>${esc(s.date||'尚無行情')} · 盤後</small></div></div><div class="detail-stat"><span>成交量<b>${nf(s.volume,2)} 千股</b></span><span>成交額<b>${money(s.amount)}</b></span><span>股價來源<b>${esc(s.source||'未取得')}</b></span><span>日 K 最新<b>${esc(hist?.rows?.at(-1)?.date||'載入中')}</b></span></div></div>
+ return `<div class="backline"><button class="linkbtn" data-action="back">← 返回上一頁</button></div><div class="card pad"><div class="detail-top"><div class="brand-icon">${icon('chip')}</div><div><div class="eyebrow">${esc(s.market)} · ${esc(s.currency||curr(marketOf(s)))}</div><h1>${esc(s.name)} <span class="muted">${esc(id)}</span></h1></div><div class="row"><button class="square ${user.watch.includes(id)?'starred':''}" title="收藏" aria-label="收藏公司" data-action="watch-stock" data-id="${id}">${icon('star')}</button><button class="smallbtn" data-action="add-trade" data-stock="${id}">${icon('plus')}交易</button></div><div class="detail-price"><strong class="${tone(s.change)} num">${nf(s.price,2)}</strong><span class="${tone(s.change)} num">${pct(s.change)}</span> <small>${esc(quoteStamp(s))} · ${marketOf(s)==='TW'?'盤後':'Yahoo 可能延遲'}${s.stale?' · 舊資料':''}</small></div></div><div class="detail-stat"><span>成交量<b>${nf(s.volume,2)} 千股</b></span><span>成交額<b>${money(s.amount)}</b></span><span>股價來源<b>${esc(s.source||'未取得')}</b></span><span>日 K 最新<b>${esc(hist?.rows?.at(-1)?.date||'載入中')}</b></span></div></div>
  <div class="card section"><div class="tabs">${tabs.map(([v,t])=>`<button data-action="company-tab" data-tab="${v}" class="${companyTab===v?'selected':''}">${t}</button>`).join('')}</div><div class="pad">${companyBody(s)}</div></div>`;
 }
 function companyBody(s){
@@ -146,10 +153,11 @@ function companyBody(s){
   const f=getFeed('history:'+id);
   if(!hist)return f.state==='loading'?loading('正在載入歷史日 K…'):empty('尚無有效日 K',f.error||'點下方重新載入；價格與歷史日 K 分開取得。',`<button class="primary" data-action="load-history" data-stock="${id}">載入歷史日 K</button>`,f.state==='error');
   const all=E.aggregate(hist.rows,chartUnit),bar=all[pinned??all.length-1]||all.at(-1),an=analyses.get(id),met=an?.metrics||{};
-  return `<div class="charttools"><div class="segmented">${[['day','日 K'],['week','週 K'],['month','月 K']].map(([v,t])=>`<button data-action="chart-unit" data-value="${v}" class="${chartUnit===v?'selected':''}">${t}</button>`).join('')}</div><div class="row wrap"><div class="segmented">${[30,90,180,500].map(n=>`<button class="${chartRange===n?'selected':''}" data-action="chart-range" data-value="${n}">${n===500?'全部':n+'筆'}</button>`).join('')}</div><button class="smallbtn" data-action="export-history" data-stock="${id}">${icon('download')}日 K CSV</button></div></div><div class="ohlc" id="ohlc">${ohlcText(bar)}</div>${candles(hist.rows,E,{unit:chartUnit,range:chartRange,indicator:chartIndicator,pinned})}<div class="segmented">${[['kd','KD'],['macd','MACD'],['rsi','RSI'],['dmi','DMI']].map(([v,n])=>`<button class="${chartIndicator===v?'selected':''}" data-action="indicator" data-value="${v}">${n}</button>`).join('')}</div><div class="source section">來源 ${esc(hist.source)} · 最新 ${esc(hist.rows.at(-1).date)} · ${hist.rows.length} 筆 · 未還原除權息 · 點 K 棒釘住十字線。日線技術指標，不是盤中值。</div><div class="grid g4 section">${[['MA20',nf(met.ma20,2)],['RSI(14)',nf(met.rsi,2)],['量比（前20日）',nf(met.volumeRatio,2)],['ATR(14)',nf(met.atr,2)]].map(([k,v])=>`<div class="card pad"><small>${k}</small><h2 class="num" style="margin:8px 0 0">${v}</h2></div>`).join('')}</div><details class="section"><summary>最近 10 筆原始日 K</summary>${rawTable(hist.rows.slice(-10).reverse())}</details>`;
+  return `<div class="charttools"><div class="segmented">${[['day','日 K'],['week','週 K'],['month','月 K']].map(([v,t])=>`<button data-action="chart-unit" data-value="${v}" class="${chartUnit===v?'selected':''}">${t}</button>`).join('')}</div><div class="row wrap"><div class="segmented">${[30,90,180,500].map(n=>`<button class="${chartRange===n?'selected':''}" data-action="chart-range" data-value="${n}">${n===500?'全部':n+'筆'}</button>`).join('')}</div><button class="smallbtn" data-action="export-history" data-stock="${id}">${icon('download')}日 K CSV</button></div></div><div class="ohlc" id="ohlc">${ohlcText(bar)}</div>${candles(hist.rows,E,{unit:chartUnit,range:chartRange,indicator:chartIndicator,pinned})}<div class="segmented">${[['kd','KD'],['macd','MACD'],['rsi','RSI'],['dmi','DMI']].map(([v,n])=>`<button class="${chartIndicator===v?'selected':''}" data-action="indicator" data-value="${v}">${n}</button>`).join('')}</div><div class="source section">來源 ${esc(hist.source)} · 最新 ${esc(hist.rows.at(-1).date)} · ${hist.rows.length} 筆 · ${market==='TW'?'未還原除權息':'Yahoo OHLC；非含息總報酬'}${hist.excludedCurrentDay?' · 今日未完成 K 線已排除':''} · 點 K 棒釘住十字線。日線技術指標，不是盤中值。</div><div class="grid g4 section">${[['MA20',nf(met.ma20,2)],['RSI(14)',nf(met.rsi,2)],['量比（前20日）',nf(met.volumeRatio,2)],['ATR(14)',nf(met.atr,2)]].map(([k,v])=>`<div class="card pad"><small>${k}</small><h2 class="num" style="margin:8px 0 0">${v}</h2></div>`).join('')}</div><details class="section"><summary>最近 10 筆原始日 K</summary>${rawTable(hist.rows.slice(-10).reverse())}</details>`;
  }
  if(companyTab==='finance')return financeBody(s);
  if(companyTab==='chips')return chipsBody(s);
+ if(market!=='TW'&&['etf','news'].includes(companyTab))return empty('本版尚未接此海外資料','Yahoo 本版提供報價與日 K；不以台股資料代替。',sourceLink(s.sourceURL,'查看 Yahoo 公司頁'));
  if(companyTab==='etf')return `<h2>ETF 持倉資料</h2><p class="muted">此接口為 FinMind 主動式 ETF 每日持股，官方列為 Sponsor 會員功能。一般免費 Token 不足以取得；也不涵蓋所有被動式 ETF。</p>${feedContent(`dataset:etf:${id}`,rawTable)} `;
  if(companyTab==='news')return `<h2>公司相關新聞</h2>${feedContent(`dataset:news:${id}`,rows=>rows.slice(0,30).map(r=>`<div class="study"><small>${esc(r.date)} · ${esc(r.source||'FinMind')}</small><h3>${sourceLink(r.link||r.url,r.title||'新聞')}</h3></div>`).join(''))}`;
  if(companyTab==='research')return `<div class="row between"><h2>研究紀錄與圖表</h2><button data-action="add-note" data-stock="${id}" class="primary">${icon('plus')}新增研究</button></div>${notesList(user.notes.filter(n=>n.stock===id))}<div class="section"><button data-action="add-study" data-stock="${id}">新增法說摘要／來源頁碼</button></div>`;
@@ -193,6 +201,7 @@ function chipsBody(s){
 }
 
 function heatPage(){
+ if(market!=='TW'&&heatWeight!=='volume')heatWeight='volume';
  const vals=quotedStocks().filter(s=>heatWeight==='cap'?finite(s.shares)&&s.shares>0:finite(s[heatWeight])&&s[heatWeight]>0)
  .map(s=>({...s,weight:heatWeight==='cap'?s.shares*s.price:s[heatWeight]})).sort((a,b)=>b.weight-a.weight).slice(0,80);
  const blocks=heatMode==='themes'?themes().map(t=>{const ss=members(t.id).filter(s=>finite(s[heatWeight])&&s[heatWeight]>0);return {id:t.id,name:t.name,change:meanChange(ss),weight:ss.reduce((a,s)=>a+s[heatWeight],0),count:ss.length};}).filter(t=>t.weight>0):vals;
@@ -204,12 +213,12 @@ function heatPage(){
  };
  return head('市場熱力圖','把量價變化放到同一張圖；點選色塊深入公司或題材。','MARKET HEATMAP',
  `<button class="secondary" data-action="rotation">${icon('chart')}題材相對強弱</button>`)
- +notice()+`<div class="toolbar"><div class="segmented">${[['stocks','公司'],['themes','題材']].map(([id,n])=>`<button class="${heatMode===id?'selected':''}" data-action="heat-mode" data-mode="${id}">${n}</button>`).join('')}</div><div class="row"><label for="heat-weight">色塊面積</label><select id="heat-weight"><option value="amount" ${heatWeight==='amount'?'selected':''}>成交金額</option><option value="volume" ${heatWeight==='volume'?'selected':''}>成交量</option>${heatMode==='stocks'?`<option value="cap" ${heatWeight==='cap'?'selected':''}>估計市值（股數 × 價格）</option>`:''}</select></div><span class="tiny muted">漲跌以資料日為準 · 前 ${blocks.length} 個有效區塊</span></div>
- <div class="card pad">${blocks.length?`<div class="heatbox" style="position:relative;aspect-ratio:1000/520">${rects.map(tile).join('')}</div>`:empty('沒有可繪製的量額資料','選擇成交金額或成交量，並確認行情來源已成功回傳。') }<div class="source">顏色＝漲跌幅；面積＝${heatWeight==='amount'?'成交金額':heatWeight==='volume'?'成交量':'股數 × 價格估算，股數與價格可能不同日期'}。題材可能重複納入同一公司，不可將各題材加總當全市場規模。缺值不填零，不代表實際資金淨流入。</div></div>
+ +notice()+`<div class="toolbar"><div class="segmented">${[['stocks','公司'],['themes','題材']].map(([id,n])=>`<button class="${heatMode===id?'selected':''}" data-action="heat-mode" data-mode="${id}">${n}</button>`).join('')}</div><div class="row"><label for="heat-weight">色塊面積</label><select id="heat-weight"><option value="amount" ${market!=='TW'?'disabled':''} ${heatWeight==='amount'?'selected':''}>成交金額</option><option value="volume" ${heatWeight==='volume'?'selected':''}>成交量</option>${heatMode==='stocks'&&market==='TW'?`<option value="cap" ${heatWeight==='cap'?'selected':''}>估計市值（股數 × 價格）</option>`:''}</select></div><span class="tiny muted">漲跌以資料日為準 · 前 ${blocks.length} 個有效區塊</span></div>
+ <div class="card pad">${blocks.length?`<div class="heatbox" style="position:relative;aspect-ratio:1000/520">${rects.map(tile).join('')}</div>`:empty('沒有可繪製的量額資料','選擇成交金額或成交量，並確認行情來源已成功回傳。') }<div class="source">${market!=='TW'?'Yahoo 未提供成交金額，海外熱力圖使用來源成交量；不以價格乘總量假造金額。':''}顏色＝漲跌幅；面積＝${heatWeight==='amount'?'成交金額':heatWeight==='volume'?'成交量':'股數 × 價格估算，股數與價格可能不同日期'}。題材可能重複納入同一公司，不可將各題材加總當全市場規模。缺值不填零，不代表實際資金淨流入。</div></div>
  <div class="section-title"><h2>數據列表</h2><span class="badge">可點擊開啟</span></div>${stockTable(vals.slice(0,30),false)}`;
 }
 function stockTable(ss,technical=false){
- return `<div class="card table-wrap"><table class="table"><thead><tr><th>公司／代號</th><th>收盤價</th><th>漲跌幅</th><th>${technical?'25 日走勢':'成交金額'}</th>${technical?'<th>MA</th><th>KD</th><th>MACD</th><th>條件狀態</th>':'<th>資料日期</th>'}<th>收藏</th></tr></thead><tbody>${ss.map(s=>{const a=analyses.get(s.id),m=a?.metrics||{};return `<tr><td><button class="textbtn company-name" data-action="company" data-id="${esc(s.id)}" data-market="${marketOf(s)}">${esc(s.name)}</button><small class="block">${esc(s.id)} · ${esc(s.currency||curr(market))}</small></td><td class="num">${nf(s.price,2)}</td><td class="num ${tone(s.change)}">${pct(s.change)}</td><td>${technical?spark((histMap.get(s.id)||[]).slice(-25).map(r=>r.close)):money(s.amount)}</td>${technical?`<td>${typeof m.trend==='boolean'?m.trend?'✓':'－':'?'}</td><td>${finite(m.k)&&finite(m.d)?`${nf(m.k,1)} / ${nf(m.d,1)}`:'?'}</td><td>${finite(m.dif)?nf(m.dif,2):'?'}</td><td><span class="badge ${a?.status==='achieved'?'good':''}">${a?.available?`${nf(a.score)} / 100`:'歷史資料未齊'}</span></td>`:`<td>${esc(s.date||'未取得')}</td>`}<td><button class="square small ${user.watch.includes(s.id)?'starred':''}" data-action="watch-stock" data-id="${esc(s.id)}" aria-label="收藏 ${esc(s.name)}">${icon('star')}</button></td></tr>`;}).join('')||'<tr><td colspan="9">目前沒有符合條件的公司。</td></tr>'}</tbody></table></div>`;
+ return `<div class="card table-wrap"><table class="table"><thead><tr><th>公司／代號</th><th>${market==='TW'?'收盤價':'報價'}</th><th>漲跌幅</th><th>${technical?'25 日走勢':'成交金額'}</th>${technical?'<th>MA</th><th>KD</th><th>MACD</th><th>條件狀態</th>':'<th>資料日期</th>'}<th>收藏</th></tr></thead><tbody>${ss.map(s=>{const a=analyses.get(s.id),m=a?.metrics||{};return `<tr><td><button class="textbtn company-name" data-action="company" data-id="${esc(s.id)}" data-market="${marketOf(s)}">${esc(s.name)}</button><small class="block">${esc(s.id)} · ${esc(s.currency||curr(market))}</small></td><td class="num">${nf(s.price,2)}</td><td class="num ${tone(s.change)}">${pct(s.change)}</td><td>${technical?spark((histMap.get(s.id)||[]).slice(-25).map(r=>r.close)):money(s.amount)}</td>${technical?`<td>${typeof m.trend==='boolean'?m.trend?'✓':'－':'?'}</td><td>${finite(m.k)&&finite(m.d)?`${nf(m.k,1)} / ${nf(m.d,1)}`:'?'}</td><td>${finite(m.dif)?nf(m.dif,2):'?'}</td><td><span class="badge ${a?.status==='achieved'?'good':''}">${a?.available?`${nf(a.score)} / 100`:'歷史資料未齊'}</span></td>`:`<td>${esc(s.date||'未取得')}<small class="block muted">${esc(s.time||'')} ${s.stale?'舊資料':''}</small></td>`}<td><button class="square small ${user.watch.includes(s.id)?'starred':''}" data-action="watch-stock" data-id="${esc(s.id)}" aria-label="收藏 ${esc(s.name)}">${icon('star')}</button></td></tr>`;}).join('')||'<tr><td colspan="9">目前沒有符合條件的公司。</td></tr>'}</tbody></table></div>`;
 }
 function currentMetrics(s){const a=analyses.get(s.id)?.metrics||{};const v=dataRows('official:valuation').find(r=>r.id===s.id),r=dataRows('official:revenue').find(r=>r.id===s.id);return {...a,price:s.price,change:s.change,volume:s.volume,amount:s.amount,pe:v?.pe,pb:v?.pb,dividendYield:v?.dividendYield,yield:v?.dividendYield,revenueYoY:r?.yoy};}
 function selectedScreenStocks(){
@@ -285,7 +294,7 @@ function riskPage(){
  const key='dataset:disposition:',notes=user.notifications;
  return head('處置資訊與個人提醒','公告事實與個人研究提醒分開呈現。','RISK & NOTICES',`<button class="secondary" data-action="retry-feed" data-key="${key}">${icon('refresh')}更新處置資料</button><button class="primary" data-action="add-alert">${icon('bell')}新增價格提醒</button>`)
  +`<div class="notice">${icon('info')}<span>處置名單依來源更新與涵蓋期間顯示；不推測官方處置門檻或「明日一定處置」。價格提醒僅在網頁取得資料時檢查，無背景推播。</span></div>
- <div class="grid g2"><div class="card pad"><h2>我的價格條件</h2>${notes.filter(n=>n.type==='price').map(n=>`<div class="feed-item"><div class="grow"><b>${esc(n.stock)} ${n.op==='above'?'高於或等於':'低於或等於'} ${nf(n.price,2)}</b><p>${n.triggeredAt?'已觸發：'+esc(n.triggeredAt):'等待行情符合條件'}</p></div><button data-action="delete-alert" data-id="${esc(n.id)}">刪除</button></div>`).join('')||empty('沒有價格提醒','先新增一個價格條件。')}</div><div class="card pad"><h2>提醒邊界</h2><p>僅使用已取得的收盤價與資料日期，可能不是今天。這不是券商停損單，不會代替你送單。</p><p>法規公告若缺漏或讀取失敗，請以交易所原始公告為準。</p><div class="row wrap">${sourceLink('https://www.twse.com.tw/zh/announcement/notice.html','TWSE 公告')}${sourceLink('https://www.tpex.org.tw/','TPEx 櫃買中心')}</div></div></div>
+ <div class="grid g2"><div class="card pad"><h2>我的價格條件</h2>${notes.filter(n=>n.type==='price').map(n=>`<div class="feed-item"><div class="grow"><b>${esc(n.stock)} ${n.op==='above'?'高於或等於':'低於或等於'} ${nf(n.price,2)}</b><p>${n.triggeredAt?'已觸發：'+esc(n.triggeredAt):'等待行情符合條件'}</p></div><button data-action="delete-alert" data-id="${esc(n.id)}">刪除</button></div>`).join('')||empty('沒有價格提醒','先新增一個價格條件。')}</div><div class="card pad"><h2>提醒邊界</h2><p>僅使用已取得的報價與來源時間，可能延遲或不是今天。這不是券商停損單，不會代替你送單。</p><p>法規公告若缺漏或讀取失敗，請以交易所原始公告為準。</p><div class="row wrap">${sourceLink('https://www.twse.com.tw/zh/announcement/notice.html','TWSE 公告')}${sourceLink('https://www.tpex.org.tw/','TPEx 櫃買中心')}</div></div></div>
  <div class="section-title"><h2>近期處置資料</h2><span class="badge">FinMind · Backer／Sponsor 權限 · 查詢區間內</span></div><div class="card pad">${feedContent(key,rows=>rawTable(rows))}</div>`;
 }
 function currentSummary(id){
@@ -315,7 +324,8 @@ function settingsPage(){
  const checks=[['後端 API',apiStatus?.apiReady?'已回應 v'+apiStatus.version:apiStatus?.error||'等待檢查',apiStatus?.apiReady],
  ['本市場行情',quoteState.state==='success'?`${quotedStocks().length} 檔 · ${currentSourceDate()}`:quoteState.error||'等待資料',quoteState.state==='success'],
  ['FinMind Token',apiStatus?.historicalTokenConfigured?'已填入（不代表付費資料權限）':'未填入；部分歷史資料可能可用',!!apiStatus?.historicalTokenConfigured],
- ['海外資料',apiStatus?.overseasConfigured?'已填入 Twelve Data 設定；各市場需驗證':'未設定 TWELVE_DATA_API_KEY',!!apiStatus?.overseasConfigured],
+ ['海外資料',apiStatus?.overseasProvider==='Yahoo Finance'?'Yahoo 介接已設定，不用金鑰；不代表已取得行情':'等待新版 Yahoo 後端',!!apiStatus?.overseasConfigured],
+ ...['US','JP','KR'].map(m=>{const st=marketStates.get(m);const n=stocks(m).filter(q=>finite(q.price)&&!q.stale).length;return [m+' Yahoo',n?`${n} 檔已取得；詳見個股時間`:st?.error||'尚未請求；點上方市場切換',n>0];}),
  ['線上 AI',apiStatus?.aiConfigured?'設定已填入，待請求驗證':'需 AI 金鑰、模型與網站存取碼',!!apiStatus?.aiConfigured]];
  return head('資料、外觀與備份','不再把「API 回應」與「行情真的取得」混成同一個綠燈。','DATA & SETTINGS',`<button class="primary" data-action="check-connection">${icon('refresh')}重新檢查連線</button>`)
  +`<div class="grid g2"><section class="card pad"><h2>連線診斷</h2>${checks.map(([name,status,ok])=>`<div class="status-row"><span class="dot ${ok?'ok':'error'}"></span><div><b>${esc(name)}</b><p>${esc(status)}</p></div></div>`).join('')}<div class="notice">${icon('info')}<span>新版 API 路徑 <code>/api/atlas/</code>。收到舊版 3.x 狀態或 404，代表線上部署尚未換到此包，不是要重新申請 Token。</span></div><label for="access-code">網站存取碼（選用，不是 FinMind Token）</label><input type="password" id="access-code" placeholder="只有你設定 ATLAS_ACCESS_TOKEN 時才需要" autocomplete="off"><button class="secondary section" data-action="set-access">僅本次開頁使用</button></section>
@@ -352,35 +362,77 @@ async function ensureFeed(key,force=false){
   finally{sourceTasks.delete(key);render();}
  })();sourceTasks.set(key,task);return task;
 }
-async function loadQuotes(force=false,{warm=false}={}){
- const requestMarket=market,ticket=++quoteGeneration,old=marketStates.get(requestMarket);
- quoteState={state:'loading',error:'',cache:!!old?.cache};render();
- let symbols=stocks(requestMarket).slice(0,5).map(s=>s.id).join(',');
- try{
-  const data=await api.get('quotes?market='+requestMarket+(requestMarket!=='TW'?'&symbols='+encodeURIComponent(symbols):''));
-  if(!Array.isArray(data.quotes))throw Error('行情資料格式不符：缺少 quotes 陣列');
-  const qs=data.quotes.filter(q=>q&&typeof q.id==='string'&&typeof q.name==='string'&&(finite(q.price)||q.price===null));
-  if(!qs.some(q=>finite(q.price)))throw Error('資料來源沒有回傳有效收盤價');
-  // Never overwrite other markets or user research labels.
-  for(const q of qs)quoteMap.set(q.id,q);
-  const state={state:'success',error:'',cache:false,fetchedAt:data.fetchedAt,warnings:data.warnings||[]};marketStates.set(requestMarket,state);
-  cachePut('quotes:'+requestMarket,{...data,quotes:qs});checkPriceAlerts(requestMarket);
-  if(ticket===quoteGeneration&&requestMarket===market){quoteState=state;render();}
-  if(warm&&requestMarket==='TW'&&requestMarket===market){
-   const ids=[...new Set([...user.watch.filter(id=>marketOf(stock(id))==='TW'),...CATALOG.stocks.filter(s=>marketOf(s)==='TW').slice(0,6).map(s=>s.id)])].slice(0,6);
-   await warmHistories(ids);
-  }
-  return data;
- }catch(e){
-  const cached=cacheGet('quotes:'+requestMarket);
-  if(cached?.data?.quotes?.length){
-   for(const q of cached.data.quotes)if(q?.id&&q?.name)quoteMap.set(q.id,q);
-   marketStates.set(requestMarket,{state:'success',cache:true,error:e.message,savedAt:cached.savedAt});
-  }else marketStates.set(requestMarket,{state:'error',error:e.message,cache:false});
-  if(ticket===quoteGeneration&&requestMarket===market){quoteState=marketStates.get(requestMarket);render();}
-  return null;
+const marketJobs=new Map();
+function ingestHistories(histories,requestedMarket){
+ for(const [id,h] of Object.entries(histories||{})){
+  if(h?.market!==requestedMarket||!Array.isArray(h.rows)||h.rows.length<2)continue;
+  try{const rows=E.validateBars(h.rows);histMap.set(id,rows);analyses.set(id,E.analyze(rows));feedStore.set('history:'+id,{state:'success',data:{...h,rows}});}
+  catch(e){feedStore.set('history:'+id,{state:'error',error:e.message});}
  }
 }
+async function loadQuotes(force=false,{warm=false}={}){
+ const requestMarket=market;
+ if(marketJobs.has(requestMarket))return marketJobs.get(requestMarket);
+ const job=(async()=>{
+  const old=marketStates.get(requestMarket);
+  quoteState={state:'loading',error:'',cache:!!old?.cache,progress:0};render();
+  const ordered=[...new Set([
+   ...(routes()[0]==='company'&&routes()[1]?[routes()[1]]:[]),
+   ...user.watch.filter(id=>marketOf(stock(id))===requestMarket),
+   ...stocks(requestMarket).map(s=>s.id)
+  ])].slice(0,60);
+  const groups=requestMarket==='TW'?[null]:Array.from({length:Math.ceil(ordered.length/5)},(_,i)=>ordered.slice(i*5,i*5+5));
+  const received=new Map(),warnings=[],histories={};let fetchedAt='',lastError=null,completed=0;
+  try{
+   if(!groups.length)throw Error('\u8acb\u5148\u641c\u5c0b\u4e26\u52a0\u5165\u672c\u5e02\u5834\u7684\u516c\u53f8\u4ee3\u865f\u3002');
+   for(const group of groups){
+    // Stop launching more batches after the user changes market.
+    if(requestMarket!==market&&completed>0){warnings.push('\u5df2\u5207\u63db\u5e02\u5834\uff0c\u5176\u9918\u6279\u6b21\u5df2\u505c\u6b62\u3002');break;}
+    try{
+     const data=await api.get('quotes?market='+requestMarket+(group?'&symbols='+encodeURIComponent(group.join(',')):''));
+     if(!Array.isArray(data.quotes))throw Error('\u884c\u60c5\u683c\u5f0f\u932f\u8aa4\uff1a\u7f3a\u5c11 quotes');
+     for(const q of data.quotes){
+      if(q&&typeof q.id==='string'&&typeof q.name==='string'&&marketOf(q)===requestMarket&&(finite(q.price)||q.price===null)){
+       const clean={...q,stale:false};quoteMap.set(q.id,clean);received.set(q.id,clean);
+      }
+     }
+     ingestHistories(data.histories,requestMarket);Object.assign(histories,data.histories||{});
+     warnings.push(...(data.warnings||[]));fetchedAt=data.fetchedAt||fetchedAt;
+     completed+=group?.length||data.quotes.length;
+     if(requestMarket===market){quoteState={state:'loading',progress:completed,total:ordered.length};render();}
+     if(data.failures?.some(f=>['YAHOO_RATE_LIMIT','YAHOO_ACCESS_DENIED'].includes(f.code)))break;
+    }catch(e){
+     lastError=e;warnings.push(e.message);completed+=group?.length||0;
+     if(requestMarket==='TW'||['YAHOO_RATE_LIMIT','YAHOO_ACCESS_DENIED','YAHOO_NETWORK','YAHOO_TIMEOUT'].includes(e.code)||e.status===401)break;
+    }
+   }
+   const qs=[...received.values()];
+   if(!qs.some(q=>finite(q.price)))throw lastError||Error('\u4f86\u6e90\u6c92\u6709\u56de\u50b3\u6709\u6548\u50f9\u683c\u3002');
+   for(const [id,q] of quoteMap)if(marketOf(q)===requestMarket&&!received.has(id))quoteMap.set(id,{...q,stale:true});
+   const data={quotes:[...quoteMap.values()].filter(q=>marketOf(q)===requestMarket),histories,warnings:[...new Set(warnings)],fetchedAt,provider:requestMarket==='TW'?'TWSE / TPEx':'Yahoo Finance'};
+   const state={state:'success',error:'',cache:false,fetchedAt,warnings:data.warnings,received:qs.length,requested:requestMarket==='TW'?qs.length:ordered.length,provider:data.provider};
+   marketStates.set(requestMarket,state);cachePut('quotes:'+requestMarket,data);checkPriceAlerts(requestMarket);
+   if(requestMarket===market){quoteState=state;render();}
+   if(warm&&requestMarket===market){
+    const ids=ordered.filter(id=>received.has(id)).slice(0,6);await warmHistories(ids);
+   }
+   return data;
+  }catch(e){
+   const stored=cacheGet('quotes:'+requestMarket);
+   if(stored?.data?.quotes?.length){
+    for(const q of stored.data.quotes)if(q?.id&&q?.name)quoteMap.set(q.id,{...q,stale:true});
+    // Historic cached candles remain historic; never re-date them to now.
+    ingestHistories(stored.data.histories,requestMarket);
+    marketStates.set(requestMarket,{state:'success',cache:true,error:e.message,savedAt:stored.savedAt,warnings:[e.message]});
+   }else marketStates.set(requestMarket,{state:'error',error:e.message,cache:false});
+   if(requestMarket===market){quoteState=marketStates.get(requestMarket);render();}
+   return null;
+  }
+ })();
+ marketJobs.set(requestMarket,job);
+ try{return await job;}finally{marketJobs.delete(requestMarket);}
+}
+
 async function loadHistory(id,force=false){
  if(!id)return null;const key='history:'+id;if(sourceTasks.has(key))return sourceTasks.get(key);
  if(!force&&histMap.has(id))return getFeed(key).data;
@@ -410,8 +462,8 @@ async function scanHistories(){
 }
 function checkPriceAlerts(m){
  let changed=false;for(const a of user.notifications.filter(n=>n.type==='price'&&!n.triggeredAt)){
-  const s=stock(a.stock);if(marketOf(s)!==m||!finite(s.price))continue;
-  if(a.op==='above'?s.price>=a.price:s.price<=a.price){a.triggeredAt=`${s.date}，價 ${s.price}（${s.source}）`;changed=true;toast(`${a.stock} 符合你設定的收盤價格條件；資料日 ${s.date}`);}
+  const s=stock(a.stock);if(marketOf(s)!==m||!finite(s.price)||s.stale)continue;
+  if(a.op==='above'?s.price>=a.price:s.price<=a.price){a.triggeredAt=`${s.date}，價 ${s.price}（${s.source}）`;changed=true;toast(`${a.stock} 符合你設定的報價條件；資料日 ${s.date}`);}
  }if(changed)save();
 }
 function setAutoRefresh(){
@@ -427,6 +479,7 @@ function onRoute(){
  }
  if(['themes','theme','chain','screener','radar','company','companies'].includes(r))ensureFeed('official:companies');
  if(r==='company'&&id){
+  if(market!=='TW'){ensureCompanyQuote(id,market);if(companyTab==='technical')loadHistory(id);return;}
   if(companyTab==='basic'){ensureFeed('official:valuation');ensureFeed('official:revenue');}
   if(companyTab==='technical')loadHistory(id);
   if(companyTab==='finance')ensureFeed('dataset:'+financeTab+':'+id);
@@ -449,12 +502,42 @@ function area(name,label,value='',attrs=''){return `<div class="full"><label for
 function form(id,body,footer='儲存'){return `<form id="${id}"><div class="formgrid">${body}</div><div id="form-error" class="error-text" role="alert"></div><div class="dialog-actions"><button type="button" data-action="close-modal">取消</button><button class="primary" type="submit">${footer}</button></div></form>`;}
 function formError(e){const box=$('#form-error');if(box)box.textContent=e.message||String(e);else toast(e.message||String(e),true);}
 function modalSearch(){
- showModal('搜尋公司與題材',`<input id="search-input" placeholder="台積電、2330、CoWoS…" autocomplete="off"><div class="source">搜尋目前公司目錄與研究題材，不查閱原站會員資料。</div><div id="search-results"></div>`,{wide:true});renderSearch('');
+ showModal('搜尋公司與題材',`<input id="search-input" placeholder="${market==='TW'?'台積電、2330、CoWoS':market==='US'?'AAPL, NVDA, Apple':market==='JP'?'7203.T, Toyota':'005930.KS, Samsung'}"  autocomplete="off"><div class="source">搜尋目前公司目錄與研究題材，不查閱原站會員資料。</div><div id="search-results"></div>`,{wide:true});renderSearch('');
 }
+let remoteSearch={query:'',market:'',results:[],error:'',loading:false};
 function renderSearch(query){
- const q=query.trim().toLowerCase(),ss=stocks().filter(s=>!q||`${s.id} ${s.name} ${s.fullName||''}`.toLowerCase().includes(q)).slice(0,30),ts=themes().filter(t=>q&&`${t.name} ${t.id} ${t.desc||''}`.toLowerCase().includes(q));
- $('#search-results').innerHTML=ts.map(t=>`<button class="search-result" data-action="open-theme" data-id="${esc(t.id)}"><span>${icon('map')} ${esc(t.name)}</span><span class="badge">題材</span></button>`).join('')+ss.map(s=>`<div class="search-result"><button class="textbtn" data-action="company" data-id="${esc(s.id)}" data-market="${marketOf(s)}"><b>${esc(s.name)}</b><small> ${s.id} · ${s.market}</small></button><button class="square ${user.watch.includes(s.id)?'starred':''}" data-action="watch-stock" data-id="${esc(s.id)}">${icon('star')}</button></div>`).join('')||empty('沒有符合結果','請確認已選正確市場；公司名錄也可能尚未載入。');
+ const q=query.trim().toLowerCase(),local=stocks().filter(s=>!q||`${s.id} ${s.name} ${s.fullName||''}`.toLowerCase().includes(q)).slice(0,30),ts=themes().filter(t=>q&&`${t.name} ${t.id} ${t.desc||''}`.toLowerCase().includes(q));
+ const remote=remoteSearch.query===q&&remoteSearch.market===market?remoteSearch:{results:[],loading:false,error:''};
+ const ss=[...new Map([...local,...remote.results].map(s=>[s.id,s])).values()];
+ const body=ts.map(t=>`<button class="search-result" data-action="open-theme" data-id="${esc(t.id)}"><span>${icon('map')} ${esc(t.name)}</span><span class="badge">\u984c\u6750</span></button>`).join('')+ss.map(s=>`<div class="search-result"><button class="textbtn" data-action="company" data-id="${esc(s.id)}" data-market="${marketOf(s)}"><b>${esc(s.name)}</b><small> ${esc(s.id)} \u00b7 ${esc(s.market)}</small></button><button class="square ${user.watch.includes(s.id)?'starred':''}" data-action="watch-stock" data-id="${esc(s.id)}">${icon('star')}</button></div>`).join('');
+ $('#search-results').innerHTML=(market!=='TW'?`<div class="notice"><span>${esc(market)}\uff1a\u53ef\u8f38\u5165 AAPL\u30017203.T\u3001005930.KS\u3001247540.KQ \u7b49\u5c0d\u61c9\u5e02\u5834\u4ee3\u865f\u3002</span><button class="secondary" data-action="search-yahoo" ${!q||remote.loading?'disabled':''}>${remote.loading?'\u67e5\u8a62\u4e2d\u2026':'\u5f9e Yahoo \u67e5\u8a62'}</button></div>`:'')+(remote.error?`<div class="notice error">${esc(remote.error)}</div>`:'')+(body||empty('\u6c92\u6709\u7b26\u5408\u7684\u672c\u6a5f\u516c\u53f8','\u6d77\u5916\u516c\u53f8\u53ef\u6309\u4e0a\u65b9 Yahoo \u67e5\u8a62\uff1b\u8acb\u78ba\u8a8d\u5df2\u9078\u5c0d\u5e02\u5834\u3002'));
 }
+async function searchFromYahoo(){
+ const input=$('#search-input'),query=input?.value.trim()||'',requestedMarket=market;
+ if(!query)return;
+ remoteSearch={query:query.toLowerCase(),market:requestedMarket,results:[],error:'',loading:true};renderSearch(query);
+ try{
+  const data=await api.get('search?market='+requestedMarket+'&q='+encodeURIComponent(query));
+  if(!Array.isArray(data.results))throw Error('Yahoo search response is invalid.');
+  const results=data.results.filter(x=>x.id&&x.name&&marketOf(x)===requestedMarket);
+  for(const result of results)companyMap.set(result.id,result);
+  remoteSearch={query:query.toLowerCase(),market:requestedMarket,results,error:'',loading:false};
+ }catch(e){remoteSearch={query:query.toLowerCase(),market:requestedMarket,results:[],error:e.message,loading:false};}
+ if($('#search-input')&&market===requestedMarket)renderSearch($('#search-input').value);
+}
+async function ensureCompanyQuote(id,m){
+ if(m==='TW'||finite(quoteMap.get(id)?.price)||sourceTasks.has('quote:'+id))return;
+ const task=(async()=>{
+  try{
+   const data=await api.get('quotes?market='+m+'&symbols='+encodeURIComponent(id));
+   for(const q of data.quotes||[])if(q.id&&q.name&&marketOf(q)===m)quoteMap.set(q.id,{...q,stale:false});
+   ingestHistories(data.histories,m);
+   if(m===market&&quoteState.state==='error'){quoteState={state:'success',cache:false,warnings:data.warnings||[],provider:'Yahoo Finance'};marketStates.set(m,quoteState);}
+  }catch(e){if(m===market)toast(e.message,true);}
+  finally{sourceTasks.delete('quote:'+id);render();}
+ })();sourceTasks.set('quote:'+id,task);return task;
+}
+
 function tradeModal(id='',edit=''){
  const t=edit?user.trades.find(x=>x.id===edit):null,s=stock(id||t?.stock||'2330');
  showModal(t?'修改交易':'新增交易',form('trade-form',`<input type="hidden" name="id" value="${esc(t?.id||'')}">${field('stock','公司代號',t?.stock||id||'','text','required maxlength="16"')}${field('name','公司名稱',t?.name||s.name||'','text','maxlength="100"')}${field('date','成交日期',t?.date||today(),'date','required max="'+today()+'"')}<div><label for="f-side">買賣別</label><select id="f-side" name="side"><option value="buy">買入</option><option value="sell" ${t?.side==='sell'?'selected':''}>賣出</option></select></div>${field('qty','股數（不是張）',t?.qty||'','number','required min="1" step="1"')}${field('price','成交價格',t?.price||'','number','required min="0.000001" step="any"')}${field('fee','手續費',t?.fee??0,'number','min="0" step="any"')}${field('tax','交易稅／其他成本',t?.tax??0,'number','min="0" step="any"')}<div><label for="f-currency">幣別</label><select name="currency" id="f-currency">${['TWD','USD','JPY','KRW'].map(c=>`<option value="${c}" ${(t?.currency||s.currency||curr(market))===c?'selected':''}>${c}</option>`).join('')}</select></div><p class="tiny">不自動填入法定費率。填你實際支付的費用；賣出超過當時持股會拒絕儲存。</p>`));
@@ -482,7 +565,7 @@ function themeModal(){
 function relationModal(){
  showModal('加入公司與來源',form('relation-form',`<div><label for="f-theme">題材</label><select name="theme" id="f-theme">${themes().map(t=>`<option value="${t.id}" ${t.id===activeTheme?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>${field('stock','公司代號','','text','required maxlength="16"')}<div><label for="f-stage">供應鏈層級</label><select name="stage" id="f-stage">${['設計／材料','製造／設備','零組件／模組','系統／應用'].map((n,i)=>`<option value="${i}">${n}</option>`).join('')}</select></div>${field('url','佐證的公司公告／公開來源','','url','required')}${area('note','分類依據（不是未經查證的供貨承諾）','','required maxlength="3000"')}`));
 }
-function alertModal(){showModal('新增收盤價格提醒',form('alert-form',field('stock','公司代號','','text','required maxlength="16"')+`<div><label for="f-op">條件</label><select name="op" id="f-op"><option value="above">收盤價 ≥</option><option value="below">收盤價 ≤</option></select></div>`+field('price','觸發價格','','number','required min="0.000001" step="any"')+'<p class="tiny">只在此網頁取得行情時檢查；不是盤中即時預警或自動停損。</p>'));}
+function alertModal(){showModal('新增報價條件提醒',form('alert-form',field('stock','公司代號','','text','required maxlength="16"')+`<div><label for="f-op">條件</label><select name="op" id="f-op"><option value="above">報價 ≥</option><option value="below">報價 ≤</option></select></div>`+field('price','觸發價格','','number','required min="0.000001" step="any"')+'<p class="tiny">只在此網頁取得行情時檢查；不是盤中即時預警或自動停損。</p>'));}
 function compareStudies(){
  if(user.studies.length<2){toast('請先建立至少兩份法說研究紀錄。');return;}
  showModal('同公司季度比較',`<div class="formgrid"><div><label>基期</label><select id="compare-a">${user.studies.map(s=>`<option value="${s.id}">${esc(s.stock+' '+s.quarter+' '+s.title)}</option>`).join('')}</select></div><div><label>比較期</label><select id="compare-b">${user.studies.map((s,i)=>`<option value="${s.id}" ${i===1?'selected':''}>${esc(s.stock+' '+s.quarter+' '+s.title)}</option>`).join('')}</select></div></div><div id="study-comparison"></div>`,{wide:true});renderStudyComparison();
@@ -496,13 +579,13 @@ function renderStudyComparison(){
 
 function backtestModal(){
  const id=routes()[0]==='company'?routes()[1]:user.watch[0]||'2330';
- showModal('策略回測（獨立規則，不是原站演算法）',form('backtest-form',field('stock','公司代號',id,'text','required maxlength="16"')+`<div><label for="f-strategy">策略</label><select name="strategy" id="f-strategy">${[['trend','MA 多頭'],['breakout','突破前 20 日高點'],['kd','KD 交叉'],['dmi','DMI 交叉'],['macd','MACD 交叉']].map(([v,n])=>`<option value="${v}">${n}</option>`).join('')}</select></div>`+field('capital','初始資金',1000000,'number','required min="1" step="any"')+field('holdBars','持有交易日上限',20,'number','required min="1" max="250" step="1"')+field('feePct','單邊手續費 %（自行輸入）',0,'number','required min="0" max="10" step="any"')+field('taxPct','賣出稅費 %（自行輸入）',0,'number','required min="0" max="10" step="any"')+field('slippagePct','單邊滑價 %',0.1,'number','required min="0" max="10" step="any"')+field('stopPct','停損幅度 %',8,'number','required min="0.01" max="50" step="any"')+field('targetPct','停利幅度 %',15,'number','required min="0.01" max="50" step="any"')+'<p class="tiny full">先用 60 筆暖機。收盤訊號下一交易日開盤成交，同根碰停損及停利採先停損。未還原除權息，不模擬漲跌停無法成交／容量限制，不可用這個結果保證獲利。</p>','執行回測')+'<div id="backtest-output"></div>',{wide:true});
+ showModal('策略回測（獨立規則，不是原站演算法）',form('backtest-form',field('stock','公司代號',id,'text','required maxlength="16"')+`<div><label for="f-strategy">策略</label><select name="strategy" id="f-strategy">${[['trend','MA 多頭'],['breakout','突破前 20 日高點'],['kd','KD 交叉'],['dmi','DMI 交叉'],['macd','MACD 交叉']].map(([v,n])=>`<option value="${v}">${n}</option>`).join('')}</select></div>`+field('capital','初始資金',1000000,'number','required min="1" step="any"')+field('holdBars','持有交易日上限',20,'number','required min="1" max="250" step="1"')+field('feePct','單邊手續費 %（自行輸入）',0,'number','required min="0" max="10" step="any"')+field('taxPct','賣出稅費 %（自行輸入）',0,'number','required min="0" max="10" step="any"')+field('slippagePct','單邊滑價 %',0.1,'number','required min="0" max="10" step="any"')+field('stopPct','停損幅度 %',8,'number','required min="0.01" max="50" step="any"')+field('targetPct','停利幅度 %',15,'number','required min="0.01" max="50" step="any"')+'<p class="tiny full">先用 60 筆暖機。收盤訊號下一交易日開盤成交，同根碰停損及停利採先停損。依來源 OHLC，非含息總報酬；不模擬漲跌停無法成交／容量限制，不可用這個結果保證獲利。</p>','執行回測')+'<div id="backtest-output"></div>',{wide:true});
 }
 function showBacktest(result,id){
  const el=$('#backtest-output');if(!el)return;
  if(result.error){el.innerHTML=empty('回測無法執行',result.error);return;}
  // Keep raw accounting labels explicit; do not advertise win probability.
- el.innerHTML=`<div class="section"><h2>${esc(stock(id).name||id)} 回測結果</h2>${metrics([['淨報酬',pct(result.totalReturn),'含輸入費率與滑價',tone(result.totalReturn)],['最大回撤',pct(result.maxDrawdown),'依回測權益曲線'],['完成交易',nf(result.trades?.length),'樣本越少不確定性越高'],['樣本區間',esc(result.equity?.[0]?.date||''),result.equity?.at(-1)?.date||'']])}${result.trades?.length<100?'<div class="notice">完成交易少於 100 筆，樣本不足；這不是可靠的勝率估計。</div>':''}${lineChart([{name:'回測權益',values:(result.equity||[]).map(v=>v.value??v.equity)}],{labels:(result.equity||[]).map(v=>v.date),yLabel:'策略權益（資金單位）'})}${rawTable((result.trades||[]).slice(-80))}<div class="source">來源：${esc(getFeed('history:'+id).data?.source||'')}；未還原日線。以最後一筆收盤結清剩餘持股，詳見原始交易明細。</div></div>`;
+ el.innerHTML=`<div class="section"><h2>${esc(stock(id).name||id)} 回測結果</h2>${metrics([['淨報酬',pct(result.totalReturn),'含輸入費率與滑價',tone(result.totalReturn)],['最大回撤',pct(result.maxDrawdown),'依回測權益曲線'],['完成交易',nf(result.trades?.length),'樣本越少不確定性越高'],['樣本區間',esc(result.equity?.[0]?.date||''),result.equity?.at(-1)?.date||'']])}${result.trades?.length<100?'<div class="notice">完成交易少於 100 筆，樣本不足；這不是可靠的勝率估計。</div>':''}${lineChart([{name:'回測權益',values:(result.equity||[]).map(v=>v.value??v.equity)}],{labels:(result.equity||[]).map(v=>v.date),yLabel:'策略權益（資金單位）'})}${rawTable((result.trades||[]).slice(-80))}<div class="source">來源：${esc(getFeed('history:'+id).data?.source||'')}；依來源 OHLC，非含息總報酬。以最後一筆收盤結清剩餘持股，詳見原始交易明細。</div></div>`;
 }
 function rotationModal(){
  const points=themes().map(t=>{
@@ -566,12 +649,13 @@ async function doAction(el){
   if(a==='open-theme'){activeTheme=id;navigate('theme/'+id);return;}
   if(a==='back'){navigate('themes');return;}
   if(a==='open-search'){modalSearch();return;}
+  if(a==='search-yahoo'){await searchFromYahoo();return;}
   if(a==='market'){
-   market=el.dataset.market;quoteState=marketStates.get(market)||{state:'loading'};screenerPage=0;
+   market=el.dataset.market;if(market!=='TW')heatWeight='volume';try{sessionStorage.setItem('atlas-map-market',market);}catch{}quoteState=marketStates.get(market)||{state:'loading'};screenerPage=0;
    if(routes()[0]==='company')navigate('themes');else render();loadQuotes(false,{warm:true});return;
   }
   if(a==='toggle-theme'){user.settings.theme=document.documentElement.dataset.theme==='dark'?'light':'dark';save();render();return;}
-  if(a==='refresh'){await loadQuotes(true,{warm:false});return;}
+  if(a==='refresh'){await loadQuotes(true,{warm:true});return;}
   if(a==='check-connection'){await Promise.all([checkStatus(),loadQuotes(true)]);return;}
   if(a==='set-access'){api.access=$('#access-code').value.trim();$('#access-code').value='';for(const [k,v]of feedStore)if(v.state==='error')feedStore.delete(k);await Promise.all([checkStatus(),loadQuotes(true,{warm:true})]);onRoute();return;}
   if(a==='retry-feed'){await ensureFeed(el.dataset.key,true);return;}
@@ -585,6 +669,7 @@ async function doAction(el){
   if(a==='finance-tab'){financeTab=tab;onRoute();return;}
   if(a==='chip-tab'){chipTab=tab;onRoute();return;}
   if(a==='load-history'){await loadHistory(id||routes()[1],true);return;}
+  if(a==='load-company-data'&&market!=='TW'){await loadQuotes(true,{warm:true});return;}
   if(a==='load-company-data'){const sid=id||routes()[1];await Promise.all([loadHistory(sid),ensureFeed('official:valuation',true),ensureFeed('official:revenue',true)]);return;}
   if(a==='chart-unit'){chartUnit=el.dataset.value; pinned=null;render();return;}
   if(a==='chart-range'){chartRange=Number(el.dataset.value);pinned=null;render();return;}
@@ -678,8 +763,8 @@ document.addEventListener('keydown',event=>{
 });
 window.addEventListener('hashchange',()=>{window.scrollTo({top:0});onRoute();});
 async function bootstrap(){
- const m=routes()[2];if(['TW','US','JP','KR'].includes(m))market=m;
- const stored=cacheGet('quotes:'+market);if(stored?.data?.quotes){for(const q of stored.data.quotes)quoteMap.set(q.id,q);quoteState={state:'success',cache:true};marketStates.set(market,quoteState);}
+ let m=routes()[2];try{m=m||sessionStorage.getItem('atlas-map-market');}catch{}if(['TW','US','JP','KR'].includes(m))market=m;if(market!=='TW')heatWeight='volume';
+ const stored=cacheGet('quotes:'+market);if(stored?.data?.quotes){for(const q of stored.data.quotes)quoteMap.set(q.id,{...q,stale:true});ingestHistories(stored.data.histories,market);quoteState={state:'success',cache:true};marketStates.set(market,quoteState);}
  onRoute();setAutoRefresh();
  // Intentionally parallel: health metadata must never gate a working quote feed.
  await Promise.all([checkStatus(),loadQuotes(false,{warm:true}),ensureFeed('official:companies')]);
@@ -688,8 +773,8 @@ async function bootstrap(){
 if('serviceWorker' in navigator&&!globalThis.ATLAS_TEST_MODE&&location.protocol!=='file:'){
  navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});
  let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{
-  if(reloaded||sessionStorage.getItem('atlas-v9-sw-reload'))return;
-  reloaded=true;sessionStorage.setItem('atlas-v9-sw-reload','1');location.reload();
+  if(reloaded||sessionStorage.getItem('atlas-v10-sw-reload'))return;
+  reloaded=true;sessionStorage.setItem('atlas-v10-sw-reload','1');location.reload();
  });
 }
 bootstrap().catch(e=>{console.error('ATLAS startup:',e);$('#app').innerHTML=empty('啟動未完成',e.message,'<a href="./start.html">開啟更新修復頁</a>',true);});

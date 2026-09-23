@@ -25,3 +25,8 @@
   for = "/start.html"
   [headers.values]
     Cache-Control = "no-store"
+
+[[headers]]
+  for = "/atlas-*.mjs"
+  [headers.values]
+    Cache-Control = "no-cache"

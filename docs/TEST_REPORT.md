@@ -1,36 +1,63 @@
-# v9 測試紀錄
+# v10 test report - 2026-09-24
 
-日期：2026-09-23
-環境：Node.js 22.16.0、Python 3、Playwright + /usr/bin/chromium
-版本：9.0.0 / map-rebuild-9
+Version: 10.0.0 / yahoo-overseas-10.
 
-## 已實際執行
+## Executed checks
+- `npm run check`: expected frontend and Netlify source files found.
+- `npm test`: 78 tests passed (42 retained core + 36 Yahoo integration/parser tests).
+- Embedded Chromium desktop/mobile harness: 46 checks passed, no JavaScript page
+  exceptions, 1440x1000 desktop and 390x844 touch layout without document overflow.
 
-- `node scripts/check-build.mjs`：通過，檢查新入口、部署核心檔案。
-- `node --check site/atlas-app.mjs`：通過。
-- `node --test tests/core.test.mjs`：**42／42 通過**。
-- `python tests/browser_smoke.py --preview … --output …`：**78／78 通過**，瀏覽器頁面例外 **0**。
+Browser checks covered all 20 US / 4 JP / 4 KR catalog quotes; source labels and
+exchange times; daily/weekly/monthly candles; selected-market signals; Yahoo
+remote lookup; out-of-catalog watched-symbol reload; unchanged v9 storage key;
+market switching; volume heatmap; partial-failure old-cache messages; mobile
+company and diagnostic screens. The fixture prices are NOT market prices.
 
-## 42 個 Node 檢查覆蓋
+Backend checks include ticker validation and suffixes, wrong currencies/symbols,
+null/invalid bars, incomplete session exclusion, previous-close correctness,
+independent adjusted close, search filtering, all three markets without Twelve
+Data keys, batching, simultaneous-call dedupe, two-request limit, 429 cooldown,
+403 stop/no bypass, cached results and token-protected cache headers.
 
-缺值處理、民國日期、成交量單位、OHLC、來源欄位空白／變更、月營收千元換算、股數、CSV 引號／公式安全、明確欄位匯出、成本／超賣／多幣別、備份格式、自訂題材格式、規則三值判定、指標計算、週 K 聚合、回測次日成交、禁止基本面前視、法人自營商去重、日期對齊、熱力分割、API 路由／狀態／權限／錯誤、Token 不進 URL 等。
+## Material limitations
+All successful data tests used synthetic Yahoo-shaped and Taiwan-shaped fixtures.
+Actual Yahoo chart requests for AAPL, 7203.T and 005930.KS failed to connect from
+this execution environment. That does not prove the endpoint works or fails from
+your Netlify region. No deployed-site acceptance or live data accuracy claims.
 
-## 78 個瀏覽器檢查覆蓋
+The browser environment blocked HTTP navigation. The test loaded the bundled
+frontend via page.set_content and bridged API calls to a local fixture server.
+This tests the view and application flow, NOT hosted module loading, real HTTPS
+routing, browser-origin security, service-worker installation, native persistent
+storage or a physical iPhone/Safari device. Storage reload is simulated in the
+embedded harness. Source file/module syntax was checked separately.
 
-14 個主要路由及 1440px 防橫向溢出、公司八個頁籤、日週月 K、四種指標、釘選 K 棒、搜尋與收藏、交易建立及超賣阻擋、筆記 HTML 轉義、行事曆、作者、法說兩季比較、條件選股、回測、非 AI 摘要、熱力圖、台韓市場隔離、390px 八個頁面及手機搜尋視窗。
+## Reproduce Node tests
+```
+npm run check
+npm test
+```
 
-另注入：
-1. status API 失敗，行情仍成功：52 檔行情正常保留。
-2. quotes API 失敗：沒有憑空生成行情，設定頁有錯誤。
-3. 所有 API 失敗：頁面仍可開啟，資料數 0，不冒充成功。
-4. 故障注入後仍無 JavaScript page exception。
+## Reproduce embedded browser tests (optional)
+Requires Python requests/playwright and Chromium (testing only). From repo root:
+```
+ATLAS_TEST_DATA=1 PORT=8890 node scripts/dev-server.mjs
+# In another terminal:
+python -m pip install requests playwright
+python -m playwright install chromium
+node scripts/build-preview.mjs docs/test-results/v10-harness.html
+python tests/browser_yahoo.py
+```
+The browser script accepts ATLAS_TEST_BASE, ATLAS_TEST_OUTPUT and
+CHROMIUM_EXECUTABLE environment overrides. Generated harness HTML is test-only;
+do NOT publish it as the production homepage. The retained browser_smoke.py is
+an older v9 test and was not used for the v10 count above.
 
-## 沒有宣稱完成的測試
+Results: docs/test-results/node-tests.txt and browser-yahoo.json.
 
-- **所有市場數值都來自明確合成的 mock fixtures，不是真實行情。**
-- 瀏覽器管理策略禁止本機 URL 導航，因此將同一份前端邏輯生成單檔後，以 Playwright `set_content` 操作。
-- 本次未完成真實 Netlify build/production、TWSE、TPEx、FinMind、海外或線上 AI 端到端連線。
-- 未完成真實 iPhone Safari／加入主畫面實機、權限資費、安全滲透、原站像素一致或私有功能對等驗收。
-- 單元測試通過，不代表回測報酬有效、資料來源永不改欄位或整體是可對外收費的金融服務。
-
-附 `test-results/browser-results.json` 與 `test-results/core-final.log`，可核對逐項結果。
+## Production acceptance remaining
+Upload and deploy; confirm /api/atlas/status version 10.0.0; test quotes/history
+in US/JP/KR from the real function; inspect source dates and Yahoo errors. Then
+verify iPhone Safari navigation, storage, SW update and optional access code.
+Complete data permissions and hosting/operational review before broader use.

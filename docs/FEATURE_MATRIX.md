@@ -1,13 +1,13 @@
-# 原站公開功能與 v9 重建對照
+# 原站公開功能與 v10 重建對照
 
 核對日期：2026-09-23。參考 AIStockMap 公開導覽、可讀取公司頁與官方 App 介紹。沒有登入原站會員區，不能宣稱逐像素相同、全部功能對等或複製原站私有演算法。
 
 「可操作」指本版程式與互動已實作並用明確測試資料驗證；**不等於已驗收每一個外部資料商、已在使用者 Netlify 上線或能保證投資效果**。
 
-| 原站功能類型 | v9 實際交付 | 仍有的差異／依賴 |
+| 原站功能類型 | v10 實際交付 | 仍有的差異／依賴 |
 |---|---|---|
 | 每日焦點 | 公司重大訊息、新聞接口、研究筆記、題材入口與量價摘要 | 不含原站人工每日編輯、私有事件分類與全文資料庫 |
-| 台／美／日／韓切換 | 市場隔離、台股預設、海外可配置 Twelve Data | 美日韓資料權限與代號覆蓋未端到端驗收 |
+| 台／美／日／韓切換 | 市場隔離、台股預設、海外可配置 Yahoo Finance | 已實作報價／日 K／搜尋，不需 Twelve Data 金鑰；Yahoo 真實連線未驗收，非全市場公司資料庫 |
 | 題材總覽 | 卡片、搜尋、收藏、自訂題材與公司清單 | 20 題材／80 公司起始分類；未逐筆查核，不是原站完整數量 |
 | 供應鏈 | 四角色分欄、公司連動、附來源的角色關係紀錄 | 不是原站手繪圖／完整客戶供應商資料 |
 | 公司搜尋 | 官方公司目錄與目前取得行情、代號／名稱搜尋 | 全市場完整性以來源回應為準 |
@@ -45,3 +45,11 @@
 3. **完整對等驗收**：原站會員畫面與操作清單、OCR、正式處置預警、所有選股積木與原站特殊圖表。
 
 來源核對見 `SOURCES.md`。
+
+## v10 overseas data clarification
+Taiwan remains end-of-day. Overseas prices are Yahoo latest-available quotes,
+possibly delayed, with source time and exchange timezone. Current incomplete
+daily bars are excluded from technical calculations. Yahoo source OHLC and
+adjusted close are separate; the app does not promise unadjusted or total-return
+Yahoo prices. These statements supersede any v9-wide end-of-day/unadjusted labels
+in the retained matrix. Overseas financial/chip/research databases remain absent.

@@ -1,7 +1,6 @@
 const TWSE_URL = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL';
 const TPEX_URL = 'https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes';
 const FINMIND_URL = 'https://api.finmindtrade.com/api/v4/data';
-const TWELVE_URL = 'https://api.twelvedata.com';
 
 export class HttpError extends Error {
   constructor(message, status = 502) {
@@ -23,7 +22,16 @@ export function json(data, status = 200, cache = 'no-store') {
 }
 
 export function fail(error) {
-  if (error instanceof HttpError) return json({ error: error.message }, error.status);
+  if (error instanceof HttpError) {
+    const body = { error: error.message };
+    if (error.provider === 'Yahoo Finance') {
+      Object.assign(body, { provider: error.provider, code: error.code,
+        upstreamStatus: error.upstreamStatus, retryAfterSeconds: error.retryAfterSeconds || 0 });
+    }
+    const response = json(body, error.status);
+    if (error.retryAfterSeconds > 0) response.headers.set('Retry-After', String(error.retryAfterSeconds));
+    return response;
+  }
   console.error('ATLAS request failed', error?.name || 'Error');
   return json({ error: '\u4f3a\u670d\u5668\u8655\u7406\u5931\u6557\uff0c\u8acb\u7a0d\u5f8c\u518d\u8a66\u3002' }, 500);
 }
@@ -174,25 +182,6 @@ export async function finmind(dataset, params = {}) {
   return data.data;
 }
 
-function overseasParams(id, market) {
-  if (!['US', 'JP', 'KR'].includes(market)) throw new HttpError('\u672a\u77e5\u6d77\u5916\u5e02\u5834\u3002', 400);
-  if (!/^[A-Za-z0-9._-]{1,16}$/.test(id)) throw new HttpError('\u80a1\u7968\u4ee3\u865f\u683c\u5f0f\u932f\u8aa4\u3002', 400);
-  if (market === 'JP') return { symbol: id.replace(/\.T$/i, ''), mic_code: 'XJPX' };
-  if (market === 'KR') return { symbol: id.replace(/\.KS$/i, ''), mic_code: 'XKRX' };
-  return { symbol: id.toUpperCase(), country: 'United States' };
-}
-
-async function twelve(endpoint, params) {
-  const key = env('TWELVE_DATA_API_KEY');
-  if (!key) throw new HttpError('\u5c1a\u672a\u8a2d\u5b9a TWELVE_DATA_API_KEY\uff0c\u6d77\u5916\u8cc7\u6599\u7121\u6cd5\u9023\u7dda\u3002', 503);
-  const url = new URL(`${TWELVE_URL}/${endpoint}`);
-  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
-  url.searchParams.set('apikey', key);
-  const data = await fetchJson(url.toString(), { timeout: 22000 });
-  if (!data || data.status === 'error') throw new HttpError('\u6d77\u5916\u8cc7\u6599\u4f86\u6e90\u672a\u63d0\u4f9b\u8cc7\u6599\u3002\u8acb\u78ba\u8a8d\u4ee3\u865f\u8207\u65b9\u6848\u6b0a\u9650\u3002', 502);
-  return data;
-}
-
 export async function getHistory(id, market = 'TW') {
   market = String(market || 'TW').toUpperCase();
   if (['TW', 'TWSE', 'TPEX'].includes(market)) {
@@ -205,15 +194,8 @@ export async function getHistory(id, market = 'TW') {
     if (rows.length < 2) throw new HttpError('\u65e5\u7dda\u8cc7\u6599\u4e0d\u8db3\u3002', 502);
     return { stock: id, market: 'TW', currency: 'TWD', source: 'FinMind TaiwanStockPrice', adjusted: false, realtime: false, rows, fetchedAt: new Date().toISOString() };
   }
-  const params = overseasParams(id, market);
-  const data = await twelve('time_series', { ...params, interval: '1day', outputsize: 500, order: 'ASC', adjust: 'none', format: 'JSON' });
-  let rows = normalizeBars(data.values || []);
-  const zone = market === 'US' ? 'America/New_York' : market === 'JP' ? 'Asia/Tokyo' : 'Asia/Seoul';
-  const localToday = isoDateInZone(zone);
-  rows = rows.filter(r => r.date < localToday);
-  if (rows.length < 2) throw new HttpError('\u6d77\u5916\u65e5\u7dda\u8cc7\u6599\u4e0d\u8db3\u3002', 502);
-  const meta = data.meta || {};
-  return { stock: id, market, currency: currencies[market], source: 'Twelve Data time_series', adjusted: false, realtime: false, name: String(meta.symbol || id), rows, fetchedAt: new Date().toISOString() };
+  const { getYahooHistory } = await import('./yahoo.mjs');
+  return getYahooHistory(id, market);
 }
 
 export async function searchMarket(query, market) {
@@ -226,19 +208,8 @@ export async function searchMarket(query, market) {
     const q = query.toLowerCase();
     return { results: result.quotes.filter(r => r.id.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)).slice(0, 30).map(r => ({ id: r.id, name: r.name, market: r.market, currency: 'TWD' })), source: 'TWSE / TPEx' };
   }
-  const data = await twelve('symbol_search', { symbol: query, outputsize: 60 });
-  const countries = { US: ['united states', 'united states of america', 'usa'], JP: ['japan'], KR: ['south korea', 'korea', 'korea, republic of'] };
-  const results = [];
-  for (const row of data.data || []) {
-    const country = String(row.country || '').toLowerCase();
-    if (!countries[market].includes(country)) continue;
-    const symbol = String(row.symbol || '');
-    if (!/^[A-Za-z0-9._-]{1,12}$/.test(symbol)) continue;
-    const id = market === 'JP' ? `${symbol}.T` : market === 'KR' ? `${symbol}.KS` : symbol;
-    if (id.length > 16) continue;
-    results.push({ id, name: String(row.instrument_name || symbol), market, currency: currencies[market], exchange: String(row.exchange || '') });
-  }
-  return { results: results.slice(0, 30), source: 'Twelve Data symbol_search' };
+  const { searchYahoo } = await import('./yahoo.mjs');
+  return searchYahoo(query, market);
 }
 
 export function institutionMetrics(rows, tradingDates) {

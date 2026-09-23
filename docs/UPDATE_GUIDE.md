@@ -1,27 +1,24 @@
-# 明日智選・產業研究地圖 v9｜更新操作說明
+# 明日智選 ATLAS v10｜Yahoo 海外行情更新
 
-更新日期：2026-09-23
+**程式已完成，但尚未替你修改 GitHub 或發布 Netlify。真實 Yahoo 連線需部署後驗證。**
 
-這份是重新編寫的網站前端與 Netlify 後端，不是 v7 雷達改色，也不是 AIStockMap 原始程式。沿用既有 GitHub repository 與 Netlify 網址即可；不會自動替你發布。
+## 這次改了什麼
 
-## 先分清楚兩個檔案
+- 美股、日股、韓股：改由 Yahoo Finance 圖表資料取得報價與歷史日 K，不再需要 Twelve Data 金鑰。
+- 台股：保留 v9 的官方盤後與 FinMind 歷史資料。這不是 v7 MIS 即時版。
+- 海外一批 5 檔，分批載入內建目錄與收藏，不再只抓前 5 檔。每次更新最多 60 檔。
+- 報價時間顯示交易所時區，不把下載時間當成成交時間。
+- 共用報價與日 K 快取，減少重複查詢。海外熱力圖使用成交量，不假造成交金額。
+- 可用搜尋框按「從 Yahoo 查詢」，將目錄外的股票加入收藏。
 
-- `Atlas_Map_Rebuild_v9.zip`：真正要上傳 GitHub 的正式原始碼。正式入口沒有合成行情；來源失敗會顯示原因。
-- `Atlas_Map_Rebuild_Preview.html`：電腦瀏覽器可直接開啟的互動預覽。頂端黃色列標示「介面驗收用測試資料・非真實行情」。這份只是試操作，不要取代正式部署包，不拿其中數字判斷股票。
+## 1. 更新原網站
 
-## 1. 上傳前備份
+1. 先從原網站的「資料設定」匯出備份。本版沿用 v9 儲存名稱，不主動刪除收藏、交易或筆記。
+2. 解壓縮 `Atlas_Map_Yahoo_v10.zip`。
+3. GitHub → `Fusion-ATLAS-` → **Add file → Upload files**。
+4. 上傳解壓後的全部內容，不是 ZIP 本身，不要多包一層資料夾。
 
-舊版有自行輸入交易、筆記或收藏時，先從舊版設定匯出完整備份。
-新版使用獨立儲存名稱，不主動刪除舊紀錄。更換瀏覽器、網址、裝置，不會自動同步資料。
-
-## 2. 更新同一個 GitHub repository
-
-在電腦解壓縮 `Atlas_Map_Rebuild_v9.zip`。
-
-開啟 GitHub 的 `Fusion-ATLAS-` → **Add file → Upload files**。
-上傳解壓縮後「裡面的內容」，不是 ZIP 本身，也不是再包一層外部資料夾。
-
-完成後最外層應該直接看到：
+最外層應直接看到：
 
 ```text
 site/
@@ -34,109 +31,73 @@ package.json
 README.md
 ```
 
-按 **Commit changes**，提交到已連接 Netlify 的正式分支。
+5. **Commit changes**，等 Netlify 最新部署顯示 **Published**。
+6. 保留原本 `FINMIND_TOKEN`。本版海外介面不需要新的 API Key，也不讀取 `TWELVE_DATA_API_KEY`。不要將 Token 放進 GitHub。
 
-這版新增的 `server/` 與 `scripts/` 都必須上傳。只傳 `site/` 仍然沒有後端。
-
-## 3. 等 Netlify 完成新的部署
-
-進入原來的 Netlify 專案 → **Deploys**，等待最新 commit 顯示 **Published**。
-
-檔案已配置：
-- Base directory：repository 根目錄
-- Build command：`node scripts/check-build.mjs`
-- Publish directory：`site`
-- Functions directory：`server/functions`
-- Node：22
-- 新版 Function 名稱：`atlas`
-- 新版 API：`/api/atlas/*`
-
-不要再加舊版 `/api/*` → `/.netlify/functions/*` 的轉址。
-GitHub 中舊 `netlify/functions` 檔案即使還在，也不會被本版 Functions 設定選用。
-本版 `site/_redirects` 是刻意保留的空規則檔，用來覆蓋可能殘留的舊 API rewrite。
-
-原本 Netlify 的 `FINMIND_TOKEN` 可以保留，不需重辦，不要搬進 GitHub。
-`TWELVE_DATA_API_KEY`、AI 金鑰是選用；未填也不應阻止台股頁開啟。
-
-## 4. 先從新的更新入口進去
-
-部署成功後，用瀏覽器開：
+## 2. 從更新入口開啟
 
 ```text
 https://spiffy-vacherin-6d2081.netlify.app/start.html
 ```
 
-按 **更新程式並開啟**。
+按 **更新程式並開啟**，再選上方「美股」、「日股」或「韓股」。
+它只清除舊程式快取，不刪除個人紀錄。頁尾應顯示 `v10.0.0`。
 
-這個動作只移除同網址舊網站的 Service Worker 和 ATLAS 程式快取，不刪除交易、收藏、筆記，也不改 Netlify Token。
+來源有回應時，股價與日 K 會分批出現。每檔有足夠日 K 後，才能計算 MA、KD、MACD、RSI、DMI 與選股條件。
+沒有資料時請開「資料設定」查看原因，不要重複新增 FinMind Token。
 
-成功後應看到：
-- 白色／紫色的「明日智選・產業地圖」新頁面，而不是綠黑色雷達首頁。
-- 上方導覽有每日焦點、題材總覽、公司資料庫、供應鏈、財經創作者、熱力圖、行事曆、法說解析、處置股、選股、AI 分析、我的持股。
-- 資料設定顯示後端版本 `9.0.0`。
+## 3. 代號怎麼填
 
-iPhone 可使用同一網址；不要直接在附件預覽器裡使用正式網站。真正 iPhone/Safari 裝置仍需部署後驗收。
+| 市場 | 示例 | 本版規則 |
+|---|---|---|
+| 美股 | `AAPL`, `NVDA`, `BRK-B` | 先選 US；`BRK.B` 會轉為 `BRK-B` |
+| 日股 | `7203.T`, `6758.T` | 先選 JP；`7203` 會補 `.T` |
+| 韓股 KOSPI | `005930.KS`, `000660.KS` | 保留前導零 |
+| 韓股 KOSDAQ | `247540.KQ` | 請明確填 `.KQ`；只填數字會預設 `.KS` |
 
-## 5. 不再靠一個「尚未連線」猜問題
+代號範例只說明輸入方式，不是投資建議。目錄仍為 20 檔美股、4 檔日股、4 檔韓股的起始索引，不是全市場資料庫。
 
-網站 → **資料設定** → **重新檢查連線**。
-
-這裡會分開列：
-1. 後端 API 有沒有回應。
-2. 台股行情實際取得幾檔、資料日期。
-3. FinMind Token 有沒有設定。
-4. 各公司日線、財務、籌碼取得的筆數或錯誤。
-
-後端能回應，不代表行情來源一定成功；有 Token，也不代表有付費資料集權限。
-
-需要單獨驗證時，新網址如下：
+## 4. 檢查連線
 
 ```text
-https://spiffy-vacherin-6d2081.netlify.app/api/atlas/status
-https://spiffy-vacherin-6d2081.netlify.app/api/atlas/quotes?market=TW
-https://spiffy-vacherin-6d2081.netlify.app/api/atlas/history?market=TW&stock=2330
+/api/atlas/status
+/api/atlas/quotes?market=US&symbols=AAPL,NVDA
+/api/atlas/quotes?market=JP&symbols=7203.T
+/api/atlas/quotes?market=KR&symbols=005930.KS,000660.KS
+/api/atlas/history?market=JP&stock=7203.T
+/api/atlas/search?market=US&q=AAPL
 ```
 
-第一個應回 `version: "9.0.0"`、`apiReady: true`。
-本版 `realtime: false`、`delayedIntraday: false` 是正確狀態；它是盤後資料版，不是 MIS 即時版，也沒有假裝成原站約延遲 15–20 分鐘的盤中服務。
-**不要再用舊 `/api/status` 或 `/.netlify/functions/status` 判斷新版。**
+以上路徑加在你的 Netlify 網址後方。若有設 `ATLAS_ACCESS_TOKEN`，請在網站資料設定填存取碼後測試，不要把密碼放網址。
 
-## 資料來源與權限
+`status` 的 `version` 應為 `10.0.0`，`overseasProvider` 為 `Yahoo Finance`。
+**`overseasConfigured: true` 只代表介面已配置，不代表成功取得行情。**
+請以 `quotes` 內容、實際成功筆數與時間判斷。不要再使用舊的 `/api/status`。
 
-### 先使用的台股資料
-- TWSE／TPEx 官方 API：盤後量價、公司名錄、月營收、估值、重大訊息。
-- FinMind：歷史日 K、個股三大法人、資券、財務等資料接口。
-- API 版本、來源限流、網路或欄位變更，仍可能讓單項失敗；本次沒有完成你線上環境的全部外部來源驗收。
-- 公司名錄是來源覆蓋；20 個題材／80 家分類起始索引則是可編輯的研究種子，不是原站完整分類庫，分類尚未逐筆查核。
+## 5. 更新頻率與正確性
 
-### 不要誤以為免費 Token 包含全部
-FinMind 官方文件標示：
-- `TaiwanStockHoldingSharesPer`：Backer／Sponsor。
-- `TaiwanStockDispositionSecuritiesPeriod`：Backer／Sponsor。
-- `TaiwanStockActiveETFHolding`：Sponsor。
+本版使用 5 分鐘伺服器快取，不是 5 秒即時跳價。更新按鈕不會繞過快取或來源限制。
+日 K 排除尚未完成的今日棒，不將盤中價冒充正式收盤訊號。當天收盤認定依來源時段加 30 分鐘緩衝；不明確就保守使用前一完成日。
+價格與技術訊號因此可能不是同一個交易日。
+Yahoo OHLC 與 `adjustedClose` 分開保存，未把調整收盤價混進原始開高低。回測不是含配息再投資的總報酬。
 
-這些接口存在，不代表你的帳號取得了權限。本版會顯示失敗，不用合成數字替代。處置頁也不是處置門檻預測器。
+## 6. 失敗時不要一直重按
 
-海外行情需要 Twelve Data 金鑰與市場權限，並未完成美／日／韓資料方案驗收。
-線上 AI 需要 `OPENAI_API_KEY`、`OPENAI_MODEL` 與 `ATLAS_ACCESS_TOKEN`；沒有設定時只提供明確標記為「非生成式 AI」的資料摘要。
+| 訊息 | 含義 |
+|---|---|
+| `YAHOO_ACCESS_DENIED` / 401 / 403 | Yahoo 拒絕存取；不是缺 Twelve Data 金鑰。本程式不繞過存取控制。 |
+| `YAHOO_RATE_LIMIT` / 429 | 來源限流，程式暫停重試；請等待而非重複重整。 |
+| `YAHOO_NETWORK` / `YAHOO_TIMEOUT` | 伺服器無法連到來源或逾時，不能單憑此認定是你設定錯誤。 |
+| `YAHOO_SYMBOL_NOT_FOUND` | 代號不存在或來源未提供；檢查市場與後綴。 |
 
-## 研究工具怎麼用
+失敗時有舊資料就保留原時間並標示「舊快取」，沒有就顯示錯誤，不會補示範價。
 
-題材總覽 → 選題材 → 供應鏈角色 → 點公司 → 八個公司頁籤。
-有日 K 後，可用選股條件、日／週／月 K、KD／MACD／RSI／DMI 與回測。
-法說解析是自己建立來源連結、頁碼與季度數字；不是自動搬運原站圖解。
-行事曆支援手動事件與收藏公司股利日期的按需匯入；不是全市場法說資料庫。
-我的持股從零開始，輸入真實成交後按幣別分開核算，不把美元和台幣直接相加。
+## 7. 仍未完成的三項
 
-## 可選的個人存取保護
+1. **真實連線驗收**：本次環境無法連線 Yahoo 圖表端點；尚未在你的 Netlify 或 iPhone Safari 實機驗證。
+2. **海外研究資料**：這次補報價、日 K 與搜尋，不包含完整美日韓財報、籌碼或全市場供應鏈分類。
+3. **來源使用授權**：不是 Yahoo 正式保證提供的免費商業 API。自動擷取與資料轉傳需確認 Yahoo 及資料商條款與必要許可；「個人研究」不會自動免除這些要求。
 
-你的公開 API 可能被其他人呼叫，消耗資料額度。
-在 Netlify 設定 `ATLAS_ACCESS_TOKEN` 後重新部署，再在網站資料設定輸入「網站存取碼」。
+## 測試紀錄
 
-這不是 FinMind Token；網站僅在當次開頁記憶體保留，不寫入 localStorage 或備份。
-這是簡單的共享存取碼，不是會員帳號系統，也不是完整安全驗收。不要把它當正式多人金融服務。
-
-## 尚未完整對等的範圍
-
-請閱讀 `docs/FEATURE_MATRIX.md`。
-原站的付費研究、完整題材與客戶關係資料庫、會員登入／訂閱、雲端同步、背景推播、庫存截圖 OCR、自動法說解析、完整處置法規引擎等，不包含在這次交付內。
+78 項 Node 程式測試與 46 項嵌入式瀏覽器測試通過。上游資料均為明確測試格式，不是真實行情連線成功證明。詳見 `docs/TEST_REPORT.md`。

@@ -1,0 +1,482 @@
+
+> atlas-industry-map-rebuild@10.0.0 test
+> node --test tests/*.test.mjs
+
+TAP version 13
+# Subtest: number conversion retains missing values
+ok 1 - number conversion retains missing values
+  ---
+  duration_ms: 1.248921
+  type: 'test'
+  ...
+# Subtest: ROC and calendar dates
+ok 2 - ROC and calendar dates
+  ---
+  duration_ms: 1.389696
+  type: 'test'
+  ...
+# Subtest: normalized quotes express volumes in thousand shares
+ok 3 - normalized quotes express volumes in thousand shares
+  ---
+  duration_ms: 0.38296
+  type: 'test'
+  ...
+# Subtest: no-price row does not become zero
+ok 4 - no-price row does not become zero
+  ---
+  duration_ms: 0.241515
+  type: 'test'
+  ...
+# Subtest: daily bars reject duplicate dates
+ok 5 - daily bars reject duplicate dates
+  ---
+  duration_ms: 1.134689
+  type: 'test'
+  ...
+# Subtest: monthly revenues convert source thousand TWD to TWD
+ok 6 - monthly revenues convert source thousand TWD to TWD
+  ---
+  duration_ms: 0.679557
+  type: 'test'
+  ...
+# Subtest: official field whitespace accepted
+ok 7 - official field whitespace accepted
+  ---
+  duration_ms: 0.267961
+  type: 'test'
+  ...
+# Subtest: corporate profiles retain declared share count
+ok 8 - corporate profiles retain declared share count
+  ---
+  duration_ms: 0.139006
+  type: 'test'
+  ...
+# Subtest: untrusted URL schemes and credentials rejected
+ok 9 - untrusted URL schemes and credentials rejected
+  ---
+  duration_ms: 0.47391
+  type: 'test'
+  ...
+# Subtest: CSV quoted multiline roundtrip
+ok 10 - CSV quoted multiline roundtrip
+  ---
+  duration_ms: 1.549518
+  type: 'test'
+  ...
+# Subtest: CSV spreadsheet formulas neutralized on export
+ok 11 - CSV spreadsheet formulas neutralized on export
+  ---
+  duration_ms: 0.340969
+  type: 'test'
+  ...
+# Subtest: ledger includes acquisition fee in average cost
+ok 12 - ledger includes acquisition fee in average cost
+  ---
+  duration_ms: 15.604525
+  type: 'test'
+  ...
+# Subtest: ledger rejects overselling
+ok 13 - ledger rejects overselling
+  ---
+  duration_ms: 1.32064
+  type: 'test'
+  ...
+# Subtest: ledger realizes cost correctly on sale
+ok 14 - ledger realizes cost correctly on sale
+  ---
+  duration_ms: 0.679193
+  type: 'test'
+  ...
+# Subtest: currencies do not combine
+ok 15 - currencies do not combine
+  ---
+  duration_ms: 0.426201
+  type: 'test'
+  ...
+# Subtest: backup import schema checked
+ok 16 - backup import schema checked
+  ---
+  duration_ms: 0.453051
+  type: 'test'
+  ...
+# Subtest: technical rule missing is not false/zero
+ok 17 - technical rule missing is not false/zero
+  ---
+  duration_ms: 0.20631
+  type: 'test'
+  ...
+# Subtest: OR can be true with other missing condition
+ok 18 - OR can be true with other missing condition
+  ---
+  duration_ms: 0.099319
+  type: 'test'
+  ...
+# Subtest: AND false + missing is false
+ok 19 - AND false + missing is false
+  ---
+  duration_ms: 0.066996
+  type: 'test'
+  ...
+# Subtest: OHLC contradictory data rejected
+ok 20 - OHLC contradictory data rejected
+  ---
+  duration_ms: 0.248521
+  type: 'test'
+  ...
+# Subtest: insufficient history never gives fabricated signal score
+ok 21 - insufficient history never gives fabricated signal score
+  ---
+  duration_ms: 1.371636
+  type: 'test'
+  ...
+# Subtest: sufficient history produces indicators and bounded score
+ok 22 - sufficient history produces indicators and bounded score
+  ---
+  duration_ms: 8.90664
+  type: 'test'
+  ...
+# Subtest: weekly aggregation preserves volume
+ok 23 - weekly aggregation preserves volume
+  ---
+  duration_ms: 0.917026
+  type: 'test'
+  ...
+# Subtest: backtest enforces next-day execution
+ok 24 - backtest enforces next-day execution
+  ---
+  duration_ms: 7.710658
+  type: 'test'
+  ...
+# Subtest: fundamental lookahead not permitted in custom backtest
+ok 25 - fundamental lookahead not permitted in custom backtest
+  ---
+  duration_ms: 0.508905
+  type: 'test'
+  ...
+# Subtest: dealer subgroups not double counted
+ok 26 - dealer subgroups not double counted
+  ---
+  duration_ms: 0.191084
+  type: 'test'
+  ...
+# Subtest: monthly revenue fiscal period is not publication date
+ok 27 - monthly revenue fiscal period is not publication date
+  ---
+  duration_ms: 0.226402
+  type: 'test'
+  ...
+# Subtest: treemap stays inside area
+ok 28 - treemap stays inside area
+  ---
+  duration_ms: 0.151474
+  type: 'test'
+  ...
+# Subtest: status does not confuse token configured with data verified
+ok 29 - status does not confuse token configured with data verified
+  ---
+  duration_ms: 19.207033
+  type: 'test'
+  ...
+# Subtest: new custom status URL works
+ok 30 - new custom status URL works
+  ---
+  duration_ms: 0.501896
+  type: 'test'
+  ...
+# Subtest: quote endpoint adapts actual provider-format test fixtures
+ok 31 - quote endpoint adapts actual provider-format test fixtures
+  ---
+  duration_ms: 21.882307
+  type: 'test'
+  ...
+# Subtest: history endpoint returns source labeled daily OHLC
+ok 32 - history endpoint returns source labeled daily OHLC
+  ---
+  duration_ms: 6.331957
+  type: 'test'
+  ...
+# Subtest: data endpoints all have rows and timestamps
+ok 33 - data endpoints all have rows and timestamps
+  ---
+  duration_ms: 24.66322
+  type: 'test'
+  ...
+# Subtest: optional access token protects data not health
+ok 34 - optional access token protects data not health
+  ---
+  duration_ms: 14.062374
+  type: 'test'
+  ...
+# Subtest: FinMind token is sent via auth header not URL
+ok 35 - FinMind token is sent via auth header not URL
+  ---
+  duration_ms: 0.446349
+  type: 'test'
+  ...
+# Subtest: provider failure stays an error not synthetic quotes
+ok 36 - provider failure stays an error not synthetic quotes
+  ---
+  duration_ms: 0.452193
+  type: 'test'
+  ...
+# Subtest: partial official feed still supplies successful source with warning
+ok 37 - partial official feed still supplies successful source with warning
+  ---
+  duration_ms: 2.012023
+  type: 'test'
+  ...
+# Subtest: invalid route/data parameters are rejected
+ok 38 - invalid route/data parameters are rejected
+  ---
+  duration_ms: 0.97745
+  type: 'test'
+  ...
+# Subtest: AI without settings is not faked
+ok 39 - AI without settings is not faked
+  ---
+  duration_ms: 0.650801
+  type: 'test'
+  ...
+# Subtest: schema drift does not become successful empty data
+ok 40 - schema drift does not become successful empty data
+  ---
+  duration_ms: 0.135721
+  type: 'test'
+  ...
+# Subtest: CSV exports only explicitly requested columns
+ok 41 - CSV exports only explicitly requested columns
+  ---
+  duration_ms: 0.26137
+  type: 'test'
+  ...
+# Subtest: malformed custom themes fail backup validation
+ok 42 - malformed custom themes fail backup validation
+  ---
+  duration_ms: 0.194723
+  type: 'test'
+  ...
+# Subtest: US ticker normalization and class-share symbols
+ok 43 - US ticker normalization and class-share symbols
+  ---
+  duration_ms: 1.673454
+  type: 'test'
+  ...
+# Subtest: JP ticker mapping retains alphanumeric Tokyo symbols
+ok 44 - JP ticker mapping retains alphanumeric Tokyo symbols
+  ---
+  duration_ms: 0.318038
+  type: 'test'
+  ...
+# Subtest: KR leading zeros and KOSDAQ suffix preserved
+ok 45 - KR leading zeros and KOSDAQ suffix preserved
+  ---
+  duration_ms: 0.347847
+  type: 'test'
+  ...
+# Subtest: cross-market suffixes, URLs, traversal and oversized inputs rejected
+ok 46 - cross-market suffixes, URLs, traversal and oversized inputs rejected
+  ---
+  duration_ms: 0.473152
+  type: 'test'
+  ...
+# Subtest: Yahoo shape US AAPL
+ok 47 - Yahoo shape US AAPL
+  ---
+  duration_ms: 43.645721
+  type: 'test'
+  ...
+# Subtest: Yahoo shape JP 7203.T
+ok 48 - Yahoo shape JP 7203.T
+  ---
+  duration_ms: 21.816167
+  type: 'test'
+  ...
+# Subtest: Yahoo shape KR 005930.KS
+ok 49 - Yahoo shape KR 005930.KS
+  ---
+  duration_ms: 18.062384
+  type: 'test'
+  ...
+# Subtest: Yahoo shape KR 247540.KQ
+ok 50 - Yahoo shape KR 247540.KQ
+  ---
+  duration_ms: 29.07526
+  type: 'test'
+  ...
+# Subtest: previous close comes from previous bar, never range-start chartPreviousClose
+ok 51 - previous close comes from previous bar, never range-start chartPreviousClose
+  ---
+  duration_ms: 1.782313
+  type: 'test'
+  ...
+# Subtest: latest quote does not need a same-day complete bar
+ok 52 - latest quote does not need a same-day complete bar
+  ---
+  duration_ms: 1.566635
+  type: 'test'
+  ...
+# Subtest: quote date uses the exchange timezone rather than UTC
+ok 53 - quote date uses the exchange timezone rather than UTC
+  ---
+  duration_ms: 5.847278
+  type: 'test'
+  ...
+# Subtest: missing volume and trading amount stay null
+ok 54 - missing volume and trading amount stay null
+  ---
+  duration_ms: 2.856461
+  type: 'test'
+  ...
+# Subtest: quote volume converted from shares to thousand shares
+ok 55 - quote volume converted from shares to thousand shares
+  ---
+  duration_ms: 1.619944
+  type: 'test'
+  ...
+# Subtest: split/dividend adjusted close is not substituted into OHLC
+ok 56 - split/dividend adjusted close is not substituted into OHLC
+  ---
+  duration_ms: 3.070164
+  type: 'test'
+  ...
+# Subtest: null OHLC row is excluded rather than converted to zero
+ok 57 - null OHLC row is excluded rather than converted to zero
+  ---
+  duration_ms: 2.000027
+  type: 'test'
+  ...
+# Subtest: wrong returned currency is rejected
+ok 58 - wrong returned currency is rejected
+  ---
+  duration_ms: 4.887267
+  type: 'test'
+  ...
+# Subtest: wrong returned symbol is rejected
+ok 59 - wrong returned symbol is rejected
+  ---
+  duration_ms: 1.103303
+  type: 'test'
+  ...
+# Subtest: malformed schema and invalid timezone are rejected
+ok 60 - malformed schema and invalid timezone are rejected
+  ---
+  duration_ms: 2.274657
+  type: 'test'
+  ...
+# Subtest: duplicate trading date rejected
+ok 61 - duplicate trading date rejected
+  ---
+  duration_ms: 4.34326
+  type: 'test'
+  ...
+# Subtest: partial current-day candle excluded from indicators and backtest
+ok 62 - partial current-day candle excluded from indicators and backtest
+  ---
+  duration_ms: 2.834067
+  type: 'test'
+  ...
+# Subtest: final daily candle retained after session close and safety margin
+ok 63 - final daily candle retained after session close and safety margin
+  ---
+  duration_ms: 2.376166
+  type: 'test'
+  ...
+# Subtest: no timestamped quote falls back to complete daily close and discloses end-of-day
+ok 64 - no timestamped quote falls back to complete daily close and discloses end-of-day
+  ---
+  duration_ms: 3.842852
+  type: 'test'
+  ...
+# Subtest: all three markets work in handler without Twelve Data or Yahoo API key
+ok 65 - all three markets work in handler without Twelve Data or Yahoo API key
+  ---
+  duration_ms: 93.719587
+  type: 'test'
+  ...
+# Subtest: batch includes every requested stock, not first stock only
+ok 66 - batch includes every requested stock, not first stock only
+  ---
+  duration_ms: 127.256374
+  type: 'test'
+  ...
+# Subtest: batch limit rejects oversize instead of silently truncating
+ok 67 - batch limit rejects oversize instead of silently truncating
+  ---
+  duration_ms: 1.363383
+  type: 'test'
+  ...
+# Subtest: one missing symbol does not discard successful stock
+ok 68 - one missing symbol does not discard successful stock
+  ---
+  duration_ms: 40.239054
+  type: 'test'
+  ...
+# Subtest: history reuses chart cache populated by quotes
+ok 69 - history reuses chart cache populated by quotes
+  ---
+  duration_ms: 23.713944
+  type: 'test'
+  ...
+# Subtest: concurrent identical chart requests are deduplicated
+ok 70 - concurrent identical chart requests are deduplicated
+  ---
+  duration_ms: 63.835151
+  type: 'test'
+  ...
+# Subtest: simultaneous distinct upstream requests are bounded to two
+ok 71 - simultaneous distinct upstream requests are bounded to two
+  ---
+  duration_ms: 118.567288
+  type: 'test'
+  ...
+# Subtest: HTTP 429 returns structured cooldown without retrying upstream
+ok 72 - HTTP 429 returns structured cooldown without retrying upstream
+  ---
+  duration_ms: 3.279954
+  type: 'test'
+  ...
+# Subtest: HTTP 403 is a source denial, not missing API key; no bypass attempt
+ok 73 - HTTP 403 is a source denial, not missing API key; no bypass attempt
+  ---
+  duration_ms: 1.182909
+  type: 'test'
+  ...
+# Subtest: HTML response never becomes a successful quote
+ok 74 - HTML response never becomes a successful quote
+  ---
+  duration_ms: 0.692875
+  type: 'test'
+  ...
+# Subtest: search filters market, class of security, and KOSDAQ suffix
+ok 75 - search filters market, class of security, and KOSDAQ suffix
+  ---
+  duration_ms: 0.427075
+  type: 'test'
+  ...
+# Subtest: direct symbol search works without search endpoint
+ok 76 - direct symbol search works without search endpoint
+  ---
+  duration_ms: 20.662094
+  type: 'test'
+  ...
+# Subtest: status does not assert actual overseas data verification
+ok 77 - status does not assert actual overseas data verification
+  ---
+  duration_ms: 0.955957
+  type: 'test'
+  ...
+# Subtest: protected overseas response is not shared-cacheable
+ok 78 - protected overseas response is not shared-cacheable
+  ---
+  duration_ms: 19.925054
+  type: 'test'
+  ...
+1..78
+# tests 78
+# suites 0
+# pass 78
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 792.462643

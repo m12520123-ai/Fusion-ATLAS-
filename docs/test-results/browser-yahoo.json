@@ -1,0 +1,235 @@
+{
+  "results": [
+    {
+      "name": "TW quotes retained",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "backend v10",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "US all catalog quotes",
+      "ok": true,
+      "detail": "{'version': '10.0.0', 'market': 'US', 'status': {'ok': True, 'version': '10.0.0', 'build': 'yahoo-overseas-10', 'platform': 'netlify-functions', 'quotesMode': 'TW:end-of-day; US/JP/KR:latest-available', 'realtime': False, 'delayedIntraday':"
+    },
+    {
+      "name": "US Yahoo label visible",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "US all histories loaded",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "US screener has signals",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "US no missing key warning",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "US technical candles",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "US week candles",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "US month candles",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "US day candles",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "US exchange timezone visible",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "US no horizontal viewport overflow",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "JP all catalog quotes",
+      "ok": true,
+      "detail": "{'version': '10.0.0', 'market': 'JP', 'status': {'ok': True, 'version': '10.0.0', 'build': 'yahoo-overseas-10', 'platform': 'netlify-functions', 'quotesMode': 'TW:end-of-day; US/JP/KR:latest-available', 'realtime': False, 'delayedIntraday':"
+    },
+    {
+      "name": "JP Yahoo label visible",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "JP all histories loaded",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "JP screener has signals",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "JP no missing key warning",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "JP technical candles",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "JP week candles",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "JP month candles",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "JP day candles",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "JP exchange timezone visible",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "JP no horizontal viewport overflow",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "KR all catalog quotes",
+      "ok": true,
+      "detail": "{'version': '10.0.0', 'market': 'KR', 'status': {'ok': True, 'version': '10.0.0', 'build': 'yahoo-overseas-10', 'platform': 'netlify-functions', 'quotesMode': 'TW:end-of-day; US/JP/KR:latest-available', 'realtime': False, 'delayedIntraday':"
+    },
+    {
+      "name": "KR Yahoo label visible",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "KR all histories loaded",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "KR screener has signals",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "KR no missing key warning",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "KR technical candles",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "KR week candles",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "KR month candles",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "KR day candles",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "KR exchange timezone visible",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "KR no horizontal viewport overflow",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "KR heatmap uses available actual volume",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "remote Yahoo search result",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "new symbol company detail has quote",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "watch uses existing v9 storage",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "new watched symbol survives reload",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "failed refresh keeps usable old prices",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "failed refresh explicitly labels old cache",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile quote/candles work",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile no horizontal document overflow",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile diagnostics Yahoo present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "JS no runtime errors",
+      "ok": true,
+      "detail": "[]"
+    }
+  ],
+  "errors": []
+}

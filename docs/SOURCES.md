@@ -42,3 +42,23 @@ FinMind 持股分級與處置資料為 Backer／Sponsor、主動式 ETF 持股�
 本機容器無外部 DNS 連線；瀏覽器導航受到管理策略限制，因此使用 Playwright set_content 載入相同前端的單檔 bundle，加上完全獨立的測試資料。資料接口用 Node 請求 mock 與本機 HTTP 測試。
 **沒有宣稱本次已在 TWSE／TPEx／FinMind／Twelve Data／線上 AI 完成真實來源端到端驗收。**
 原站公開文字是功能參考，不是本版資料真實性或完整度保證。
+
+
+## v10 - Yahoo Finance overseas adapter (checked 2026-09-24)
+
+Official Yahoo sources:
+- https://help.yahoo.com/kb/SLN2310.html - exchange suffixes, providers and delays.
+- https://help.yahoo.com/kb/SLN2321.html - quote timestamp and real-time/delayed explanation.
+- https://finance.yahoo.com/quote/7203.T/ - Tokyo listing format.
+- https://finance.yahoo.com/quote/005930.KS/ - Korea listing format.
+- https://legal.yahoo.com/tw/zh-hant/yahoo/terms/otos/index.html - applicable terms;
+  review automated collection and redistribution restrictions and permissions.
+
+Implementation uses the public chart route on query1.finance.yahoo.com,
+not a documented paid API contract. No current official developer guarantee
+for this chart route was established. Search-page metadata is not a successful
+chart-API connectivity test. Live chart requests from this execution network
+failed; no production Yahoo response is represented as validated.
+
+Existing Twelve Data references above are historical v9 context only; it is
+not used by the v10 overseas adapter.
