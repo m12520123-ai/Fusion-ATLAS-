@@ -1,8 +1,27 @@
 [build]
+  base = ""
   publish = "site"
+  command = "node scripts/check-build.mjs"
 
 [functions]
-  directory = "netlify/functions"
+  directory = "server/functions"
+  node_bundler = "esbuild"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-store"
+    Service-Worker-Allowed = "/"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/start.html"
+  [headers.values]
+    Cache-Control = "no-store"

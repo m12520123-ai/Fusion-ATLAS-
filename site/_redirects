@@ -1,0 +1,2 @@
+# ATLAS v9: functions use config.path /api/atlas/*.
+# No legacy /api/* -> /.netlify/functions/* rewrite.

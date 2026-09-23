@@ -1,8 +1,14 @@
 {
-  "name": "fusion-atlas-netlify",
+  "name": "atlas-industry-map-rebuild",
+  "version": "9.0.0",
   "private": true,
-  "version": "3.2.0",
+  "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node scripts/dev-server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node scripts/check-build.mjs"
   }
 }

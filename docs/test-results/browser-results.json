@@ -1,0 +1,395 @@
+{
+  "results": [
+    {
+      "name": "parallel bootstrap",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "initial histories",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "page themes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop no page overflow themes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "page companies",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop no page overflow companies",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "page chain",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop no page overflow chain",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "page creators",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop no page overflow creators",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "page heat",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop no page overflow heat",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "page calendar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop no page overflow calendar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "page research",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop no page overflow research",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "page risk",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop no page overflow risk",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "page screener",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop no page overflow screener",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "page ai",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop no page overflow ai",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "page portfolio",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop no page overflow portfolio",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "page watch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop no page overflow watch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "page settings",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop no page overflow settings",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "page coverage",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop no page overflow coverage",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "company tab basic",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "company tab industry",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "company tab finance",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "company tab chips",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "company tab etf",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "company tab technical",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "company tab news",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "company tab research",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "candles present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chart week",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chart month",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chart day",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "indicator macd",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "indicator rsi",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "indicator dmi",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "indicator kd",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "pin candle",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "search matched",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "watch saved",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "trade stored",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "oversell visible error",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "note escaped",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "calendar saved",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "creator saved",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "quarter compare",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rule boolean matches",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "backtest rendered",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "offline summary truthful",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "heat tiles",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "KR remains unconfigured",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "TW recovered",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile no overflow focus",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile no overflow themes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile no overflow company/2330/TW",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile no overflow heat",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile no overflow calendar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile no overflow screener",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile no overflow portfolio",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile no overflow settings",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile search modal visible",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no browser page exceptions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fault isolation status-failed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fault visible status-failed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fault isolation quotes-failed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fault visible quotes-failed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fault isolation all-failed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fault visible all-failed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no exceptions after fault injection",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "errors": []
+}

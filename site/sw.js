@@ -1,6 +1,15 @@
-/* Cache only the application shell. API data and secrets are never cached here. */
-const CACHE='atlas-shell-fusion-v3.2.0';
-const FILES=['./','./index.html','./styles.css','./data.js','./app.js','./engine.js','./icon.svg','./icon-192.png','./icon-512.png','./manifest.webmanifest'];
+
+const CACHE='atlas-map-v9-shell';
+const FILES=['/index.html','/atlas-ui.css?v=9.0.0','/atlas-engine.js?v=9.0.0','/atlas-app.mjs?v=9.0.0','/atlas-catalog.mjs','/atlas-store.mjs','/atlas-charts.mjs','/map-icon.svg'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()));});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('atlas-shell-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
-self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(e.request.method!=='GET'||u.origin!==self.location.origin||u.pathname.includes('/api/'))return;if(e.request.mode==='navigate'){e.respondWith(fetch(e.request).then(r=>{if(r.ok){const copy=r.clone();caches.open(CACHE).then(c=>c.put('./index.html',copy));}return r;}).catch(()=>caches.match('./index.html')));return;}e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>(k.startsWith('atlas-shell-')||k.startsWith('atlas-map-v'))&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
+self.addEventListener('fetch',e=>{
+ const u=new URL(e.request.url);
+ // Financial API responses and protected requests are NEVER service-worker cached.
+ if(e.request.method!=='GET'||u.origin!==self.location.origin||u.pathname.startsWith('/api/')||e.request.headers.has('x-atlas-token')||u.pathname==='/start.html')return;
+ const allowed=FILES.some(f=>new URL(f,self.location.origin).pathname===u.pathname)||u.pathname==='/';
+ if(!allowed)return;
+ e.respondWith(fetch(e.request).then(r=>{
+  if(r.ok&&r.type==='basic'){const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));}return r;
+ }).catch(async()=>await caches.match(e.request)||e.request.mode==='navigate'&&await caches.match('/index.html')||new Response('Offline',{status:503})));
+});
