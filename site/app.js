@@ -42,6 +42,7 @@ let state;
 try{const raw=localStorage.getItem('atlas-state-v1');state=raw?validateState(JSON.parse(raw)):structuredClone(defaults);}catch{state=structuredClone(defaults);storageFailed=true;}
 function save(){try{localStorage.setItem('atlas-state-v1',JSON.stringify(state));}catch{storageFailed=true;toast('瀏覽器無法儲存，請用「匯出備份」保留資料。',true);}}
 let view='home',mapTheme='ai',heatTheme='all',heatDirection='all',heatWeight='amount',mapZoom=1,mapStyle='map',mode='unconnected',liveQuotes={},liveMeta=null,apiToken='',quoteBusy=false;
+let realtimeConfigured=false,realtimeBusy=false,realtimeTimer=null,realtimeLastAt='';
 let sortKey='amount',sortDir=-1,filters={q:'',theme:'all',market:'all',min:'',max:'',change:'',watch:false},selectedStock=null,stockRange=66,stockHist=null,histLoading=false,histError='',histTicket=0;
 let searchPurpose='stock',focusReturn=null,chat=[{role:'assistant',label:'離線研究整理 · 非生成式 AI',text:'歡迎來到股脈。輸入股票代號、公司名稱或產業主題，我會整理目前資料中的分類、漲跌、同題材公司，以及需要再查證的地方。\n\n示範模式的價格與分類不代表真實市場。我不提供買賣指令，也不把預先規則假裝成 AI。'}],aiOnline=false,aiConsent=false,chatBusy=false;
 const historyCache=new Map();let comparisonSeries={};
@@ -171,6 +172,52 @@ async function syncQuotes(options={}){
   return true;
  }catch(e){if(!quiet)toast(e.message,true);else throw e;return false;}finally{quoteBusy=false;}
 }
+function taipeiClock(){
+ const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
+ const pick=t=>parts.find(p=>p.type===t)?.value||'';return {weekday:pick('weekday'),hour:Number(pick('hour')),minute:Number(pick('minute'))};
+}
+function twMarketOpen(){const t=taipeiClock(),m=t.hour*60+t.minute;return !['Sat','Sun'].includes(t.weekday)&&m>=9*60&&m<=13*60+30;}
+function realtimeSymbols(){
+ const ids=new Set(D.stocks.filter(s=>groupOf(s)==='TW').map(s=>s.id));
+ state.watch.forEach(id=>{const s=liveQuotes[id]||catalog(id);if(s&&groupOf(s)==='TW')ids.add(id);});
+ if(selectedStock){const s=liveQuotes[selectedStock]||catalog(selectedStock);if(s&&groupOf(s)==='TW')ids.add(selectedStock);}
+ return [...ids].filter(id=>/^\d{4,6}$/.test(id)).slice(0,120);
+}
+function applyRealtimeBar(q){
+ if(!q?.bar||!historyCache.has(q.id))return;
+ const b=q.bar,rows=[...historyCache.get(q.id)],i=rows.findIndex(r=>r.date===b.date);
+ if(i>=0)rows[i]=b;else if(!rows.length||b.date>rows.at(-1).date)rows.push(b);
+ historyCache.set(q.id,rows);analyticsCache.delete(q.id);comparisonSeries={};
+}
+async function syncRealtime(options={}){
+ if(realtimeBusy||fx.market!=='TW'||mode==='demo'||mode==='imported')return false;
+ if(!options.force&&!twMarketOpen())return false;
+ realtimeBusy=true;
+ try{
+  const ids=realtimeSymbols();if(!ids.length)return false;
+  const res=await api('realtime?symbols='+encodeURIComponent(ids.join(',')));
+  if(!Array.isArray(res.quotes)||!res.quotes.length)throw Error('即時來源沒有回傳可用行情。');
+  let updated=0;
+  for(const q of res.quotes){
+   const old=liveQuotes[q.id];if(!old)continue;
+   liveQuotes[q.id]={...old,price:finite(q.price)?q.price:old.price,change:finite(q.change)?q.change:old.change,volume:finite(q.volume)?q.volume:old.volume,amount:finite(q.amount)?q.amount:old.amount,date:String(q.date||old.date||''),source:String(q.source||old.source||'FinMind realtime'),realtime:true,realtimeTime:String(q.time||'')};
+   applyRealtimeBar(q);updated++;
+  }
+  if(updated){mode='official';realtimeLastAt=res.fetchedAt||new Date().toISOString();liveMeta={...(liveMeta||{}),label:`${res.label||'FinMind 台股即時快照'}${res.quotes[0]?.time?' · '+res.quotes[0].time:''}`,fetchedAt:realtimeLastAt,realtime:true};analyticsCache.clear();render();if(selectedStock&&stock(selectedStock))drawStock();checkAlerts();}
+  if(options.force)toast(updated?`即時更新 ${updated} 檔；盤中約每 10 秒自動刷新。`:'沒有可套用的即時標的。');
+  return updated>0;
+ }catch(e){
+  if(options.force)toast(e.message,true);
+  else {console.warn('realtime polling stopped:',e.message);clearInterval(realtimeTimer);realtimeTimer=null;toast('即時更新未啟用：'+e.message,true);}
+  return false;
+ }finally{realtimeBusy=false;}
+}
+function scheduleRealtimePolling(){
+ if(realtimeTimer){clearInterval(realtimeTimer);realtimeTimer=null;}
+ if(!realtimeConfigured||fx.market!=='TW'||mode==='demo'||mode==='imported')return;
+ if(twMarketOpen())syncRealtime().catch(()=>{});
+ realtimeTimer=setInterval(()=>{if(document.hidden||fx.market!=='TW'||!twMarketOpen())return;syncRealtime().catch(()=>{});},10000);
+}
 async function getHistory(id){if(historyCache.has(id))return historyCache.get(id);const market=groupOf(stock(id)||catalog(id)||remoteCatalog.get(id)||fx.catalog?.[id])||fx.market;const res=await api('history?market='+encodeURIComponent(market)+'&stock='+encodeURIComponent(id));if(!Array.isArray(res.rows))throw Error('歷史資料格式不正確');const rows=res.rows.filter(d=>typeof d.date==='string'&&['open','high','low','close'].every(k=>finite(d[k])&&d[k]>0)&&d.high>=Math.max(d.open,d.close)&&d.low<=Math.min(d.open,d.close)).sort((a,b)=>a.date.localeCompare(b.date));if(rows.length<2)throw Error('沒有足夠歷史資料，或資料來源未授權。');historyCache.set(id,rows);return rows;}
 function toggleWatch(id){if(!stock(id)&&!state.watch.includes(id))return;const exists=state.watch.includes(id);state.watch=exists?state.watch.filter(x=>x!==id):[...state.watch,id];save();render();if(selectedStock)drawStock();toast(exists?'已移出自選清單':'已加入自選清單');}
 function toggleCompare(id){const exists=state.compare.includes(id);if(!exists&&state.compare.length>=4){toast('最多比較 4 檔，請先移除一檔。',true);return false;}if(!exists&&!stock(id))return false;state.compare=exists?state.compare.filter(x=>x!==id):[...state.compare,id];save();render();if(selectedStock)drawStock();if(view==='compare'&&mode==='official')loadComparison();toast(exists?'已移出比較':'已加入比較清單');return true;}
@@ -218,7 +265,7 @@ function handleAction(el,e){const a=el.dataset.action,id=el.dataset.id;
  case 'toggle-theme':state.theme=state.theme==='dark'?'light':'dark';save();render();if(selectedStock)drawStock();break;
  case 'range':stockRange=Number(el.dataset.range);chartPinned=null;drawStock();break;
  case 'history-retry':if(selectedStock){historyCache.delete(selectedStock);openStock(selectedStock);}break;
- case 'sync':syncQuotes();break;
+ case 'sync':if(realtimeConfigured&&fx.market==='TW')syncRealtime({force:true});else syncQuotes();break;
  case 'demo':mode='demo';closeOverlay();render();checkAlerts();toast('已切回示範資料，所有價格為合成數值。');break;
  case 'export-screen':exportStocks(filtered(),'atlas-screen-'+mode+'.csv');break;
  case 'export-heat':exportStocks(heatItems(),'atlas-heatmap-'+mode+'.csv');break;
@@ -310,7 +357,7 @@ function miniSpark(id){
 }
 function marketSwitch(){return `<div class="market-switch" aria-label="市場">${Object.entries(MARKET_NAMES).map(([id,n])=>`<button data-action="fu-market" data-id="${id}" class="${fx.market===id?'active':''}">${n}<small>${id}</small></button>`).join('')}</div>`;}
 function emptyBox(title,body,action='fu-import',label='匯入資料'){return `<div class="empty">${icon('layers')}<h3>${title}</h3><p>${body}</p>${action?btn(label,action,'plus','','primary'):''}</div>`;}
-notice=function(){return `<div class="notice ${mode==='demo'?'demo-notice':''}">${icon('info')}<span>${mode==='demo'?'<strong>操作示範</strong>　價格、K線與訊號全部由合成資料計算，D001 等為序號，不是真實行情。':mode==='unconnected'?'<strong>尚未連接行情</strong>　不顯示假報價或替代K線。請連接後端或匯入你的歷史資料。':'<strong>資料模式：'+(mode==='imported'?'使用者匯入':'外部行情')+'</strong>　依每檔來源與資料日期顯示；非即時，缺值不補造。'} <button data-action="nav" data-view="settings">資料設定 ↗</button></span></div>`;};
+notice=function(){const rt=mode==='official'&&liveMeta?.realtime;return `<div class="notice ${mode==='demo'?'demo-notice':''}">${icon('info')}<span>${mode==='demo'?'<strong>操作示範</strong>　價格、K線與訊號全部由合成資料計算，D001 等為序號，不是真實行情。':mode==='unconnected'?'<strong>尚未連接行情</strong>　不顯示假報價或替代K線。請連接後端或匯入你的歷史資料。':rt?'<strong>台股即時模式</strong>　FinMind Sponsor 快照約 10 秒更新；盤中技術指標含當日暫時 K 棒，收盤前仍可能變動。':'<strong>資料模式：'+(mode==='imported'?'使用者匯入':'外部盤後行情')+'</strong>　依每檔來源與資料日期顯示；缺值不補造。'} <button data-action="nav" data-view="settings">資料設定 ↗</button></span></div>`;};
 navs.splice(0,navs.length,
  ['home','市場總覽','home'],['radar','明日訊號雷達','bolt'],['map','產業供應鏈','map'],['heat','熱力圖・輪動','grid'],['screener','積木選股','filter'],['backtest','策略回測','chart'],
  ['calendar','事件行事曆','layers'],['focus','焦點・法說研究','note'],['risk','處置・風險中心','bell'],
@@ -319,7 +366,7 @@ render=function(){
  setAppearance();document.documentElement.dataset.font=fx.config.font;
  const current=navs.find(n=>n[0]===view)||navs[0];
  const routes={home:renderFusionHome,radar:renderRadar,map:renderFusionMap,heat:renderFusionHeat,screener:renderRules,backtest:renderBacktest,calendar:renderCalendar,focus:renderFocus,risk:renderRisk,watch:renderFusionWatch,compare:renderCompare,portfolio:renderFusionPortfolio,notes:renderNotes,assistant:renderAssistant,settings:renderFusionSettings};
- $('#app').innerHTML=`<aside class="sidebar fusion-sidebar" aria-label="主選單"><a class="brand" href="#home" data-action="nav" data-view="home"><span class="brandmark">${icon('chart')}</span><span class="brand-name">明日智選<small>ATLAS / FUSION</small></span></a><div class="nav-section">MARKET INTELLIGENCE</div><nav class="nav-list">${navs.slice(0,6).map(navItem).join('')}</nav><div class="nav-section">RESEARCH & EVENTS</div><nav class="nav-list">${navs.slice(6,9).map(navItem).join('')}</nav><div class="nav-section">MY WORKSPACE</div><nav class="nav-list">${navs.slice(9,14).map(navItem).join('')}</nav><div class="sidebar-bottom">${navItem(navs.at(-1))}<div class="local-badge"><span class="status-dot"></span> 個人研究空間 <small>LOCAL</small></div></div></aside><div class="mobile-backdrop" data-action="menu-close"></div><div class="workspace"><header class="topbar"><button class="icon-btn mobile-menu" data-action="menu" aria-label="開啟選單">${icon('menu')}</button><div class="breadcrumb">工作台 <span>/ ${current[1]}</span></div><div class="flex top-controls"><button class="search-trigger" data-action="search" aria-label="搜尋股票">${icon('search')}<span>搜尋股票、代號或題材</span><kbd>⌘ K</kbd></button><button class="icon-btn" data-action="toggle-theme" aria-label="切換深淺色">${icon(state.theme==='dark'?'sun':'moon')}</button><button class="icon-btn notification-button" data-action="fu-alerts" aria-label="通知中心">${icon('bell')}${fx.alertLog.some(x=>!x.read)?'<i></i>':''}</button><span class="avatar">ME</span></div></header><div class="marketbar">${marketSwitch()}<div class="data-state"><span class="status-dot ${mode==='demo'?'amber':''}"></span>${mode==='demo'?'合成示範':mode==='unconnected'?'尚未連線':mode==='imported'?'使用者匯入':'外部資料'}<span class="market-time">${esc(liveMeta?.label||'不自動下單')}</span>${btn('更新','sync','refresh','','small ghost')}</div></div><main id="content">${(routes[view]||routes.home)()}</main><footer class="footer"><div>明日智選 ATLAS · 獨立整合實作，與兩個參考站無隸屬關係。<br>條件分數不是勝率；資料可能延遲。研究與交易紀錄僅存於此瀏覽器。</div><button data-action="nav" data-view="settings">資料來源與完成狀態 ↗　 BUILD 03.0</button></footer><nav class="bottom-nav" aria-label="手機導覽">${[['home','總覽','home'],['radar','雷達','bolt'],['map','地圖','map'],['watch','自選','star'],['portfolio','持股','wallet']].map(n=>`<button class="${view===n[0]?'active':''}" data-action="nav" data-view="${n[0]}">${icon(n[2])}<span>${n[1]}</span></button>`).join('')}</nav></div>`;
+ $('#app').innerHTML=`<aside class="sidebar fusion-sidebar" aria-label="主選單"><a class="brand" href="#home" data-action="nav" data-view="home"><span class="brandmark">${icon('chart')}</span><span class="brand-name">明日智選<small>ATLAS / FUSION</small></span></a><div class="nav-section">MARKET INTELLIGENCE</div><nav class="nav-list">${navs.slice(0,6).map(navItem).join('')}</nav><div class="nav-section">RESEARCH & EVENTS</div><nav class="nav-list">${navs.slice(6,9).map(navItem).join('')}</nav><div class="nav-section">MY WORKSPACE</div><nav class="nav-list">${navs.slice(9,14).map(navItem).join('')}</nav><div class="sidebar-bottom">${navItem(navs.at(-1))}<div class="local-badge"><span class="status-dot"></span> 個人研究空間 <small>LOCAL</small></div></div></aside><div class="mobile-backdrop" data-action="menu-close"></div><div class="workspace"><header class="topbar"><button class="icon-btn mobile-menu" data-action="menu" aria-label="開啟選單">${icon('menu')}</button><div class="breadcrumb">工作台 <span>/ ${current[1]}</span></div><div class="flex top-controls"><button class="search-trigger" data-action="search" aria-label="搜尋股票">${icon('search')}<span>搜尋股票、代號或題材</span><kbd>⌘ K</kbd></button><button class="icon-btn" data-action="toggle-theme" aria-label="切換深淺色">${icon(state.theme==='dark'?'sun':'moon')}</button><button class="icon-btn notification-button" data-action="fu-alerts" aria-label="通知中心">${icon('bell')}${fx.alertLog.some(x=>!x.read)?'<i></i>':''}</button><span class="avatar">ME</span></div></header><div class="marketbar">${marketSwitch()}<div class="data-state"><span class="status-dot ${mode==='demo'?'amber':''}"></span>${mode==='demo'?'合成示範':mode==='unconnected'?'尚未連線':mode==='imported'?'使用者匯入':liveMeta?.realtime?'即時約10秒':'外部盤後資料'}<span class="market-time">${esc(liveMeta?.label||'不自動下單')}</span>${btn(realtimeConfigured&&fx.market==='TW'?'立即更新':'更新','sync','refresh','','small ghost')}</div></div><main id="content">${(routes[view]||routes.home)()}</main><footer class="footer"><div>明日智選 ATLAS · 獨立整合實作，與兩個參考站無隸屬關係。<br>條件分數不是勝率；資料可能延遲。研究與交易紀錄僅存於此瀏覽器。</div><button data-action="nav" data-view="settings">資料來源與完成狀態 ↗　 BUILD 03.1</button></footer><nav class="bottom-nav" aria-label="手機導覽">${[['home','總覽','home'],['radar','雷達','bolt'],['map','地圖','map'],['watch','自選','star'],['portfolio','持股','wallet']].map(n=>`<button class="${view===n[0]?'active':''}" data-action="nav" data-view="${n[0]}">${icon(n[2])}<span>${n[1]}</span></button>`).join('')}</nav></div>`;
  requestAnimationFrame(layoutHeatmaps);
 };
 function rankedRadar(){
@@ -501,7 +548,7 @@ drawStock=function(){
  selectedStock=id;requestAnimationFrame(()=>{const d=$('.stock-drawer');if(d)d.scrollTop=oldScroll;});
 };
 function renderFusionSettings(){
- return `${pageHead('DATA & WORKSPACE CONTROL','每一份資料，都說清楚。','先選資料模式，再進行研究。API金鑰留在後端，備份不含金鑰。')}<section class="panel settings-card"><h2>資料模式</h2><div class="flex wrap space">${btn('真實資料工作區','fu-real-mode','lock','','primary')}${btn('明確切換操作示範','demo','chart')}${btn('匯入行情／日線','fu-import','upload')}${btn('下載匯入範本','fu-template','download')}</div><p class="research-text">真實工作區沒有資料就顯示空白，不會自動補成示範。示範版所有價格、走勢、量能、指標與回測都不是實際行情；從真實資料切到示範會清除當次畫面的外部行情快取，不刪除研究紀錄。</p></section><div class="settings-grid space"><section class="panel settings-card"><h2>提醒與顯示設定</h2><form id="fu-config-form"><div class="input-row space">${[['profitTarget','獲利提醒 %'],['lossLimit','虧損提醒 %'],['volumeMultiplier','爆量倍率（前20筆）']].map(([id,n])=>`<div class="field"><label>${n}</label><input id="fu-config-${id}" type="number" value="${fx.config[id]}" step=".1" required></div>`).join('')}<div class="field"><label>每天開頁檢查時間（台北）</label><input id="fu-config-checkTime" type="time" value="${fx.config.checkTime}" required></div></div><div class="field space"><label>字體大小</label><select id="fu-config-font">${[['normal','一般'],['large','放大'],['xlarge','最大']].map(([v,n])=>`<option value="${v}" ${fx.config.font===v?'selected':''}>${n}</option>`).join('')}</select></div><div class="flex wrap space"><button type="submit" class="btn primary">儲存設定</button>${btn('開啟瀏覽器通知','fu-notification-permission','bell','','small')}</div><p class="tiny muted space">排程僅在網頁開啟時生效；關閉、手機休眠或未更新資料時不保證執行。網站不會在背景自動下載行情或下單。</p></form></section><section class="panel settings-card"><h2>整合完成狀態</h2><div class="capability-list">${[['可操作','雷達／技術／自訂規則／回測／地圖／輪動'],['可操作','自選／跨市場交易／筆記／行事曆／研究來源'],['需資料','台股日線／三大法人／分點／財務／新聞／官方處置'],['需金鑰','海外搜尋與日線、生成式AI'],['未完成','會員收費、雲端同步、背景推播、盤中分K'],['未完成','原站付費研究圖庫、官方處置門檻預測、截圖持股辨識']].map(([st,t])=>`<div><span class="tag ${st==='可操作'?'lime':''}">${st}</span><p>${t}</p></div>`).join('')}</div><p class="tiny muted">保留功能入口不代表擁有原站的付費內容與市場資料授權。外部連線需在你的網路與帳號下驗收。</p></section></div>${legacySettings().replace(/^.*?<div class="settings-grid">/s,'<div class="settings-grid space">').replaceAll('股脈','明日智選 ATLAS').replace('內建 40 家公司的價格與分類皆用於展示','內建多市場公司的價格與分類皆用於展示').replace('新聞訂閱、','').replace('跨裝置同步、','跨裝置同步、').replace('目前使用內建示範資料。啟動隨附 server.py 後，可嘗試更新官方盤後行情。','同源 Netlify Functions 會自動連接。台股盤後來源 TWSE/TPEx；海外需在 Netlify 環境變數設定 TWELVE_DATA_API_KEY。').replace('備份包含自選、比較、交易、筆記與提醒。','整合備份另含積木規則、事件、法說、創作者、研究卡與匯入日線。')}`;
+ return `${pageHead('DATA & WORKSPACE CONTROL','每一份資料，都說清楚。','先選資料模式，再進行研究。API金鑰留在後端，備份不含金鑰。')}<section class="panel settings-card"><h2>資料模式</h2><div class="flex wrap space">${btn('真實資料工作區','fu-real-mode','lock','','primary')}${btn('明確切換操作示範','demo','chart')}${btn('匯入行情／日線','fu-import','upload')}${btn('下載匯入範本','fu-template','download')}</div><p class="research-text">真實工作區沒有資料就顯示空白，不會自動補成示範。示範版所有價格、走勢、量能、指標與回測都不是實際行情；從真實資料切到示範會清除當次畫面的外部行情快取，不刪除研究紀錄。</p></section><div class="settings-grid space"><section class="panel settings-card"><h2>提醒與顯示設定</h2><form id="fu-config-form"><div class="input-row space">${[['profitTarget','獲利提醒 %'],['lossLimit','虧損提醒 %'],['volumeMultiplier','爆量倍率（前20筆）']].map(([id,n])=>`<div class="field"><label>${n}</label><input id="fu-config-${id}" type="number" value="${fx.config[id]}" step=".1" required></div>`).join('')}<div class="field"><label>每天開頁檢查時間（台北）</label><input id="fu-config-checkTime" type="time" value="${fx.config.checkTime}" required></div></div><div class="field space"><label>字體大小</label><select id="fu-config-font">${[['normal','一般'],['large','放大'],['xlarge','最大']].map(([v,n])=>`<option value="${v}" ${fx.config.font===v?'selected':''}>${n}</option>`).join('')}</select></div><div class="flex wrap space"><button type="submit" class="btn primary">儲存設定</button>${btn('開啟瀏覽器通知','fu-notification-permission','bell','','small')}</div><p class="tiny muted space">排程僅在網頁開啟時生效；關閉、手機休眠或未更新資料時不保證執行。台股即時模式僅在網頁開啟、頁籤可見且交易時段輪詢；關閉網站不會背景下載，也不會下單。</p></form></section><section class="panel settings-card"><h2>整合完成狀態</h2><div class="capability-list">${[['可操作','雷達／技術／自訂規則／回測／地圖／輪動'],['可操作','自選／跨市場交易／筆記／行事曆／研究來源'],['需資料','台股日線／三大法人／分點／財務／新聞／官方處置'],['需金鑰','海外搜尋與日線、生成式AI'],['已支援','FinMind Sponsor 台股約10秒快照（需 Token）'],['未完成','會員收費、雲端同步、背景推播、盤中分K'],['未完成','原站付費研究圖庫、官方處置門檻預測、截圖持股辨識']].map(([st,t])=>`<div><span class="tag ${st==='可操作'?'lime':''}">${st}</span><p>${t}</p></div>`).join('')}</div><p class="tiny muted">保留功能入口不代表擁有原站的付費內容與市場資料授權。外部連線需在你的網路與帳號下驗收。</p></section></div>${legacySettings().replace(/^.*?<div class="settings-grid">/s,'<div class="settings-grid space">').replaceAll('股脈','明日智選 ATLAS').replace('內建 40 家公司的價格與分類皆用於展示','內建多市場公司的價格與分類皆用於展示').replace('新聞訂閱、','').replace('跨裝置同步、','跨裝置同步、').replace('目前使用內建示範資料。啟動隨附 server.py 後，可嘗試更新官方盤後行情。','同源 Netlify Functions 會自動連接。台股盤後來源 TWSE/TPEx；海外需在 Netlify 環境變數設定 TWELVE_DATA_API_KEY。').replace('備份包含自選、比較、交易、筆記與提醒。','整合備份另含積木規則、事件、法說、創作者、研究卡與匯入日線。')}`;
 }
 
 /* Actions, persistence and data boundaries. No provider key is stored in the browser. */
@@ -683,7 +730,7 @@ handleAction=function(el,e){
  const a=el.dataset.action,id=el.dataset.id;
  if(a?.startsWith('fu-'))e.preventDefault();
  switch(a){
- case 'fu-market':if(MARKET_NAMES[id]){fx.market=id;filters.market='all';ruleResult=null;backtestResult=null;backtestId=(mode==='demo'?D.stocks:universe()).find(s=>groupOf(s)===id)?.id||D.stocks.find(s=>groupOf(s)===id)?.id||'';saveFx();closeOverlay();render();}return;
+ case 'fu-market':if(MARKET_NAMES[id]){fx.market=id;filters.market='all';ruleResult=null;backtestResult=null;backtestId=(mode==='demo'?D.stocks:universe()).find(s=>groupOf(s)===id)?.id||D.stocks.find(s=>groupOf(s)===id)?.id||'';saveFx();closeOverlay();render();scheduleRealtimePolling();}return;
  case 'demo':resetData('demo');closeOverlay();render();toast('目前是操作示範：所有價格、指標、回測均為合成資料。');return;
  case 'fu-real-mode':resetData();closeOverlay();render();syncQuotes().catch(()=>{});toast('真實資料工作區已開啟。缺資料保留空白。');return;
  case 'fu-import':dataImportModal();return;
@@ -804,9 +851,10 @@ async function bootstrapData(){
  if(pref==='demo'){resetData('demo');render();return;}
  if(pref==='imported'&&fx.imported.quotes.length){try{applyImport(structuredClone(fx.imported));return;}catch{}}
  try{
-  const status=await api('status');aiOnline=Boolean(status.aiConfigured);
+  const status=await api('status');aiOnline=Boolean(status.aiConfigured);realtimeConfigured=Boolean(status.realtimeConfigured||status.realtime);
   const ok=await syncQuotes({quiet:true});
   if(ok&&(view==='home'||view==='radar'))warmRadar(8).catch(()=>{});
+  if(ok)scheduleRealtimePolling();
  }catch(e){if(mode==='unconnected')toast('\u5f8c\u7aef\u5c1a\u672a\u9023\u7dda\uff1a'+e.message,true);}
 }
 mode=window.ATLAS_PREVIEW_DEMO?'demo':'unconnected';
